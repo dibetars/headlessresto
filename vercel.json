@@ -1,0 +1,11 @@
+{
+  "buildCommand": "pnpm --filter @restaurantos/web exec next build",
+  "outputDirectory": "apps/web/.next",
+  "installCommand": "pnpm install",
+  "framework": "nextjs",
+  "env": {
+    "NEXT_PUBLIC_SUPABASE_URL": "https://rwvvsutsuutyvmapukvm.supabase.co",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_xFIh0zez5067hnG7pXhpjg_MtwPUSzI",
+    "NEXT_PUBLIC_API_URL": "https://api.headlessresto.com"
+  }
+}
