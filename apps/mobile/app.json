@@ -1,0 +1,16 @@
+{
+  "expo": {
+    "name": "RestaurantOS",
+    "slug": "restaurantos",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "restaurantos",
+    "userInterfaceStyle": "automatic",
+    "splash": { "image": "./assets/splash.png", "resizeMode": "contain", "backgroundColor": "#ffffff" },
+    "ios": { "supportsTablet": true, "bundleIdentifier": "com.restaurantos.app" },
+    "android": { "adaptiveIcon": { "foregroundImage": "./assets/adaptive-icon.png", "backgroundColor": "#ffffff" }, "package": "com.restaurantos.app" },
+    "plugins": ["expo-router", "expo-location"],
+    "experiments": { "typedRoutes": true }
+  }
+}

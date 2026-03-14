@@ -1,0 +1,29 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "web",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@restaurantos/web", "dev"],
+      "port": 3000
+    },
+    {
+      "name": "super-admin",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@restaurantos/super-admin", "dev"],
+      "port": 3001
+    },
+    {
+      "name": "api",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@restaurantos/api", "dev"],
+      "port": 4000
+    },
+    {
+      "name": "all",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["dev"],
+      "port": 3000
+    }
+  ]
+}
