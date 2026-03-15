@@ -24,14 +24,6 @@ export class StockService {
   }
 
   async getLowStockItems(locationId: string) {
-    const { data, error } = await this.supabase
-      .from('stock_items')
-      .select('*')
-      .eq('location_id', locationId)
-      .not('reorder_threshold', 'is', null)
-      .lte('quantity', this.supabase.from('stock_items').select('reorder_threshold') as any);
-
-    // Simpler approach: fetch all and filter in-memory
     const { data: all, error: allError } = await this.supabase
       .from('stock_items')
       .select('*')
