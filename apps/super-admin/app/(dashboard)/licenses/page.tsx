@@ -3,6 +3,14 @@ import UpdateLicenseForm from './update-license-form';
 
 export const dynamic = 'force-dynamic';
 
+async function updateLicense(licenseId: string, tier: string, expiry: string | null) {
+  'use server';
+  await supabaseAdmin
+    .from('licenses')
+    .update({ tier, hosting_expires_at: expiry })
+    .eq('id', licenseId);
+}
+
 async function getLicenses() {
   const { data } = await supabaseAdmin
     .from('licenses')
@@ -101,7 +109,7 @@ export default async function LicensesPage() {
                     )}
                   </td>
                   <td className="px-6 py-4">
-                    <UpdateLicenseForm licenseId={license.id} currentTier={license.tier} currentExpiry={license.hosting_expires_at} />
+                    <UpdateLicenseForm licenseId={license.id} currentTier={license.tier} currentExpiry={license.hosting_expires_at} updateAction={updateLicense} />
                   </td>
                 </tr>
               );

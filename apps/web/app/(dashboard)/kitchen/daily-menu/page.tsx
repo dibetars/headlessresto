@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { CheckCircle2, Circle, Send } from 'lucide-react';
-import { createClient } from '../../../../../lib/supabase';
+import { createClient } from '../../../../lib/supabase';
 import { formatCents } from '@restaurantos/shared';
 
 interface MenuItem { id: string; name: string; category: string; price_cents: number; is_available: boolean; }

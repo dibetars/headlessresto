@@ -1,14 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { supabaseAdmin } from '../../../lib/supabase';
 
 interface Props {
   licenseId: string;
   currentExpiry: string;
+  renewAction: (licenseId: string, newExpiry: string) => Promise<void>;
 }
 
-export default function RenewForm({ licenseId, currentExpiry }: Props) {
+export default function RenewForm({ licenseId, currentExpiry, renewAction }: Props) {
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
 
@@ -17,10 +17,7 @@ export default function RenewForm({ licenseId, currentExpiry }: Props) {
     const base = new Date(currentExpiry) > new Date() ? new Date(currentExpiry) : new Date();
     base.setMonth(base.getMonth() + months);
 
-    await supabaseAdmin
-      .from('licenses')
-      .update({ hosting_expires_at: base.toISOString() })
-      .eq('id', licenseId);
+    await renewAction(licenseId, base.toISOString());
 
     setSaving(false);
     setDone(true);

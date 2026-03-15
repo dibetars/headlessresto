@@ -1,15 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { supabaseAdmin } from '../../../lib/supabase';
 
 interface Props {
   licenseId: string;
   currentTier: string;
   currentExpiry: string | null;
+  updateAction: (licenseId: string, tier: string, expiry: string | null) => Promise<void>;
 }
 
-export default function UpdateLicenseForm({ licenseId, currentTier, currentExpiry }: Props) {
+export default function UpdateLicenseForm({ licenseId, currentTier, currentExpiry, updateAction }: Props) {
   const [open, setOpen] = useState(false);
   const [tier, setTier] = useState(currentTier);
   const [expiry, setExpiry] = useState(currentExpiry ? currentExpiry.slice(0, 10) : '');
@@ -17,10 +17,7 @@ export default function UpdateLicenseForm({ licenseId, currentTier, currentExpir
 
   async function save() {
     setSaving(true);
-    await supabaseAdmin
-      .from('licenses')
-      .update({ tier, hosting_expires_at: expiry || null })
-      .eq('id', licenseId);
+    await updateAction(licenseId, tier, expiry || null);
     setSaving(false);
     setOpen(false);
   }

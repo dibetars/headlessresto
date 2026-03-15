@@ -125,7 +125,7 @@ export default function MenuItemsPage() {
                     <button
                       onClick={() => toggleAvailability(item)}
                       className="p-1.5 text-gray-400 hover:text-gray-600 rounded"
-                      title={item.is_available ? 'Mark as 86'd' : 'Mark as available'}
+                      title={item.is_available ? "Mark as 86'd" : 'Mark as available'}
                     >
                       {item.is_available ? <Eye size={15} /> : <EyeOff size={15} />}
                     </button>

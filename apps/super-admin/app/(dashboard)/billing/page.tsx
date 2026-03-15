@@ -3,6 +3,14 @@ import RenewForm from './renew-form';
 
 export const dynamic = 'force-dynamic';
 
+async function renewLicense(licenseId: string, newExpiry: string) {
+  'use server';
+  await supabaseAdmin
+    .from('licenses')
+    .update({ hosting_expires_at: newExpiry })
+    .eq('id', licenseId);
+}
+
 async function getUpcomingRenewals() {
   const thirtyDaysOut = new Date(Date.now() + 30 * 86400 * 1000).toISOString();
 
@@ -54,7 +62,7 @@ export default async function BillingPage() {
                     <p className="text-sm font-semibold text-gray-300">
                       ${((TIER_FEE[license.tier] ?? 4900) / 100).toFixed(2)}/mo
                     </p>
-                    <RenewForm licenseId={license.id} currentExpiry={license.hosting_expires_at} />
+                    <RenewForm licenseId={license.id} currentExpiry={license.hosting_expires_at} renewAction={renewLicense} />
                   </div>
                 </div>
               );
@@ -83,7 +91,7 @@ export default async function BillingPage() {
                     <p className="text-sm font-semibold text-gray-300">
                       ${((TIER_FEE[license.tier] ?? 4900) / 100).toFixed(2)}/mo
                     </p>
-                    <RenewForm licenseId={license.id} currentExpiry={license.hosting_expires_at} />
+                    <RenewForm licenseId={license.id} currentExpiry={license.hosting_expires_at} renewAction={renewLicense} />
                   </div>
                 </div>
               );

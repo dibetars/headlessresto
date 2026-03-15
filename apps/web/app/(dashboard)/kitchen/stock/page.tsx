@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Plus, AlertTriangle } from 'lucide-react';
-import { createClient } from '../../../../../lib/supabase';
+import { createClient } from '../../../../lib/supabase';
 
 interface StockItem {
   id: string;
