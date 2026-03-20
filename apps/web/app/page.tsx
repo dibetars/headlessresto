@@ -1,474 +1,688 @@
-import Link from 'next/link';
+"use client";
+
+// Trigger recompile
+import { useState, useEffect } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
 import {
-  ChefHat,
-  Zap,
   BarChart3,
-  Truck,
-  QrCode,
-  Users,
-  ShieldCheck,
   ArrowRight,
-  Star,
-  CheckCircle2,
-  Globe,
-  Clock,
+  ShieldCheck,
+  Zap,
+  Menu,
+  User,
+  Utensils,
   CreditCard,
-  Smartphone,
-} from 'lucide-react';
+  Check,
+  Phone,
+  Mail,
+  Building2,
+  UtensilsCrossed,
+  MonitorPlay,
+  QrCode,
+  Clock,
+  Calculator,
+  LayoutDashboard,
+  ChefHat
+} from "lucide-react";
 
-/* Brand colors extracted from logo */
-const navy = '#1D3F7A';
-const orange = '#E8782A';
+function HeroVideoCarousel() {
+  const videos = [
+    { src: "/Source/media/header2.mp4", poster: "/Source/media/3.png" },
+    { src: "/Source/media/header3.mp4", poster: "/Source/media/3.png" },
+    { src: "/Source/media/header4.mp4", poster: "/Source/media/3.png" },
+    { src: "/Source/media/header5.mp4", poster: "/Source/media/3.png" },
+    { src: "/Source/media/header6.mp4", poster: "/Source/media/3.png" },
+    { src: "/Source/media/header7.mp4", poster: "/Source/media/3.png" },
+  ];
 
-export default function HomePage() {
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  useEffect(() => {
+    // Pick a random video on initial mount (page refresh)
+    const randomIndex = Math.floor(Math.random() * videos.length);
+    setCurrentIndex(randomIndex);
+
+    // Continue to alternate every 8 seconds for visual variety while on the page
+    const timer = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % videos.length);
+    }, 8000); 
+    
+    return () => clearInterval(timer);
+  }, [videos.length]);
+
   return (
-    <div className="min-h-screen overflow-x-hidden" style={{ backgroundColor: '#F8FAFC', color: '#0F172A' }}>
+    <div className="absolute inset-0 z-0">
+      {videos.map((video, index) => (
+        <video
+          key={index}
+          src={video.src}
+          poster={video.poster}
+          autoPlay
+          loop
+          muted
+          playsInline
+          preload="auto"
+          className={`absolute inset-0 object-cover w-full h-full transition-opacity duration-1000 ${
+            index === currentIndex ? "opacity-70" : "opacity-0"
+          }`}
+        />
+      ))}
+    </div>
+  );
+}
 
-      {/* ── NAV ── */}
-      <nav
-        className="fixed top-0 w-full z-50 backdrop-blur-xl"
-        style={{ background: 'rgba(248,250,252,0.85)', borderBottom: '1px solid #E2E8F0' }}
+function ModuleCardV2({ icon, title, description, className = "", light = false }: { 
+  icon: React.ReactNode; 
+  title: string; 
+  description: string;
+  className?: string;
+  light?: boolean;
+}) {
+  return (
+    <div className={`p-8 rounded-[32px] border transition-all duration-500 group ${
+      light 
+        ? 'bg-black/[0.02] border-black/[0.05] hover:bg-black/[0.04] hover:border-brand-orange/20' 
+        : 'bg-white/[0.02] border-white/[0.05] hover:bg-white/[0.04] hover:border-brand-orange/20'
+    } ${className}`}>
+      <div className="mb-6 text-brand-orange group-hover:scale-110 transition-transform duration-500">
+        {icon}
+      </div>
+      <h4 className={`text-xl font-medium mb-2 uppercase tracking-tighter transition-colors ${
+        light ? 'text-slate-900 group-hover:text-brand-orange' : 'text-white group-hover:text-amber-500'
+      }`}>{title}</h4>
+      <p className={`font-bold text-xs leading-relaxed uppercase tracking-tight ${
+        light ? 'text-slate-500' : 'text-white/30'
+      }`}>{description}</p>
+    </div>
+  );
+}
+
+function RestaurantInterestForm({ light = false }: { light?: boolean }) {
+  const [formData, setFormData] = useState({
+    restaurantName: "",
+    contactPerson: "",
+    email: "",
+    phone: "",
+  });
+  const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setStatus("submitting");
+    
+    try {
+      // In a real app, we'd use a server action or API route
+      // For now, we simulate the submission to the super admin dashboard
+      console.log("Submitting to Super Admin Dashboard:", formData);
+      
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      setStatus("success");
+      setFormData({
+        restaurantName: "",
+        contactPerson: "",
+        email: "",
+        phone: "",
+      });
+    } catch (error) {
+      console.error("Submission error:", error);
+      setStatus("error");
+    }
+  };
+
+  const inputClasses = `w-full ${
+    light ? 'bg-black/5 border-black/10 text-slate-900 placeholder-black/20' : 'bg-white/5 border-white/10 text-white placeholder-white/20'
+  } rounded-2xl py-4 pl-12 pr-4 focus:outline-none focus:border-brand-orange transition-colors`;
+  
+  const labelClasses = `text-[10px] font-medium uppercase tracking-widest ${
+    light ? 'text-slate-400' : 'text-white/40'
+  } ml-4`;
+
+  const iconClasses = `absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 ${
+    light ? 'text-slate-300' : 'text-white/20'
+  }`;
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-2">
+        <label className={labelClasses}>Restaurant Name</label>
+        <div className="relative">
+          <Building2 className={iconClasses} />
+          <input
+            required
+            type="text"
+            placeholder="The Silver Fork"
+            className={inputClasses}
+            value={formData.restaurantName}
+            onChange={(e) => setFormData({ ...formData, restaurantName: e.target.value })}
+          />
+        </div>
+      </div>
+      <div className="space-y-2">
+        <label className={labelClasses}>Contact Person</label>
+        <div className="relative">
+          <User className={iconClasses} />
+          <input
+            required
+            type="text"
+            placeholder="John Doe"
+            className={inputClasses}
+            value={formData.contactPerson}
+            onChange={(e) => setFormData({ ...formData, contactPerson: e.target.value })}
+          />
+        </div>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <label className={labelClasses}>Email</label>
+          <div className="relative">
+            <Mail className={iconClasses} />
+            <input
+              required
+              type="email"
+              placeholder="john@example.com"
+              className={inputClasses}
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            />
+          </div>
+        </div>
+        <div className="space-y-2">
+          <label className={labelClasses}>Phone</label>
+          <div className="relative">
+            <Phone className={iconClasses} />
+            <input
+              required
+              type="tel"
+              placeholder="+1 (555) 000-0000"
+              className={inputClasses}
+              value={formData.phone}
+              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+            />
+          </div>
+        </div>
+      </div>
+      <Button 
+        type="submit" 
+        disabled={status === "submitting" || status === "success"}
+        className="w-full h-16 rounded-2xl bg-brand-orange hover:bg-amber-500 text-white font-medium text-sm uppercase tracking-widest mt-6 transition-all active:scale-95 disabled:opacity-50"
       >
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          {/* Logo */}
-          <div className="flex items-center gap-3">
+        {status === "idle" && "Set up the service"}
+        {status === "submitting" && "Submitting..."}
+        {status === "success" && "Success! We'll be in touch."}
+      </Button>
+    </form>
+  );
+}
+
+export default function Home() {
+  const router = useRouter();
+  const [isDemoLoading, setIsDemoLoading] = useState(false);
+
+  const [isGetStartedLoading, setIsGetStartedLoading] = useState(false);
+
+  const [isTrialLoading, setIsTrialLoading] = useState(false);
+
+  const handleTrialClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsTrialLoading(true);
+    setTimeout(() => {
+      router.push("/signup");
+    }, 800);
+  };
+
+  const handleGetStartedClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsGetStartedLoading(true);
+    setTimeout(() => {
+      router.push("/signup");
+    }, 800);
+  };
+
+  const handleDemoClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDemoLoading(true);
+    // Give it a small delay for the "loading" feel as requested
+    setTimeout(() => {
+      router.push("/demo");
+    }, 800);
+  };
+
+  return (
+    <div className="flex flex-col min-h-screen bg-background text-foreground selection:bg-brand-orange/30 selection:text-brand-orange font-work-sans overflow-x-hidden">
+      {/* Navigation */}
+      <nav className="fixed top-4 md:top-6 left-1/2 -translate-x-1/2 z-50 transition-all duration-300 pointer-events-none">
+        <div className="flex h-12 md:h-14 items-center bg-black/40 backdrop-blur-xl border border-white/[0.05] rounded-[24px] shadow-2xl px-2 md:px-3 gap-1 md:gap-2 pointer-events-auto">
+          <Link href="/" className="flex items-center pl-2 pr-3 md:pl-3 md:pr-4 group cursor-pointer shrink-0">
+            <Image 
+              src="/Source/media/5.png" 
+              alt="HeadlessResto Logo" 
+              width={120} 
+              height={28} 
+              className="h-5 md:h-6 w-auto object-contain brightness-0 invert" 
+              priority
+            />
+          </Link>
+          
+          <div className="hidden md:flex items-center bg-white/5 rounded-[18px] p-1 gap-1">
+            <Link href="#features" className="text-[10px] font-medium uppercase tracking-widest text-white/60 hover:text-white px-4 py-2 rounded-[14px] hover:bg-white/5 transition-all">Features</Link>
+            <Link href="#operators" className="text-[10px] font-medium uppercase tracking-widest text-white/60 hover:text-white px-4 py-2 rounded-[14px] hover:bg-white/5 transition-all">For Operators</Link>
+            <Link href="#pricing" className="text-[10px] font-medium uppercase tracking-widest text-white/60 hover:text-white px-4 py-2 rounded-[14px] hover:bg-white/5 transition-all">Pricing</Link>
+          </div>
+
+          <div className="flex items-center gap-1 ml-1">
+            <Button 
+              onClick={handleGetStartedClick}
+              loading={isGetStartedLoading}
+              className="h-9 md:h-10 px-4 md:px-5 rounded-[18px] bg-white text-black hover:bg-white/90 text-[10px] font-medium uppercase tracking-widest transition-all active:scale-95 shadow-lg"
+            >
+              Get started
+            </Button>
             
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.png" alt="HeadlessResto" style={{ height: 40, width: 'auto' }} />
-          </div>
-
-          <div className="hidden md:flex items-center gap-8 text-sm font-medium" style={{ color: '#475569' }}>
-            <a href="#features" className="hover:text-[#1D3F7A] transition-colors">Features</a>
-            <a href="#how" className="hover:text-[#1D3F7A] transition-colors">How it works</a>
-            <a href="#pricing" className="hover:text-[#1D3F7A] transition-colors">Pricing</a>
-            <a href="#testimonials" className="hover:text-[#1D3F7A] transition-colors">Customers</a>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Link
-              href="/login"
-              className="text-sm font-medium px-4 py-2 rounded-lg transition-colors hover:bg-slate-100"
-              style={{ color: '#475569' }}
-            >
-              Sign in
-            </Link>
-            <Link
-              href="/register"
-              className="text-sm font-semibold px-4 py-2 rounded-lg text-white transition-opacity hover:opacity-90"
-              style={{ backgroundColor: orange }}
-            >
-              Start free trial
-            </Link>
+            <button className="md:hidden text-white/60 hover:text-white transition-colors w-10 h-10 flex items-center justify-center bg-white/5 rounded-[18px]">
+              <Menu className="h-4 w-4" />
+            </button>
           </div>
         </div>
       </nav>
 
-      {/* ── HERO ── */}
-      <section className="relative pt-32 pb-24 px-6 overflow-hidden">
-        {/* Subtle background blobs */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <div
-            className="absolute -top-40 -right-40 w-[600px] h-[600px] rounded-full opacity-10"
-            style={{ background: `radial-gradient(circle, ${navy}, transparent)` }}
-          />
-          <div
-            className="absolute top-20 -left-20 w-[400px] h-[400px] rounded-full opacity-10"
-            style={{ background: `radial-gradient(circle, ${orange}, transparent)` }}
-          />
-        </div>
-
-        <div className="max-w-5xl mx-auto text-center relative">
-          {/* Badge */}
-          <div
-            className="inline-flex items-center gap-2 text-xs font-semibold rounded-full px-4 py-1.5 mb-6"
-            style={{ color: orange, background: '#FFF4EC', border: `1px solid #FDDCC4` }}
-          >
-            <Zap className="w-3 h-3" />
-            The complete restaurant operating system
+      <main className="flex-1">
+        {/* Hero Section */}
+        <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden pt-32 pb-20">
+          <div className="absolute inset-0 z-0 overflow-hidden">
+            <HeroVideoCarousel />
+            <div className="absolute inset-0 bg-black/50" />
           </div>
 
-          <h1
-            className="text-5xl md:text-7xl font-black tracking-tight leading-[1.05] mb-6"
-            style={{ color: '#0F172A' }}
-          >
-            Run your restaurant<br />
-            <span style={{ color: navy }}>like a tech company</span>
-          </h1>
-
-          <p className="text-lg md:text-xl max-w-2xl mx-auto mb-10 leading-relaxed" style={{ color: '#64748B' }}>
-            Orders, kitchen, deliveries, payroll, inventory — one platform built for
-            independent restaurants that refuse to be average.
-          </p>
-
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link
-              href="/register"
-              className="group inline-flex items-center gap-2 text-white font-semibold px-8 py-4 rounded-xl text-base transition-opacity hover:opacity-90"
-              style={{ backgroundColor: orange }}
-            >
-              Start your free 30-day trial
-              <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-            </Link>
-            <Link
-              href="/menu/demo"
-              className="inline-flex items-center gap-2 font-medium px-8 py-4 rounded-xl text-base transition-all hover:bg-slate-100"
-              style={{ color: navy, border: `1.5px solid #CBD5E1` }}
-            >
-              <QrCode className="w-4 h-4" />
-              See live menu demo
-            </Link>
-          </div>
-
-          <p className="mt-5 text-sm" style={{ color: '#94A3B8' }}>
-            No credit card required · Cancel anytime · Setup in 15 minutes
-          </p>
-        </div>
-
-        {/* ── Dashboard preview mock ── */}
-        <div className="max-w-5xl mx-auto mt-16 relative">
-          <div
-            className="rounded-2xl overflow-hidden"
-            style={{
-              border: '1px solid #E2E8F0',
-              background: '#FFFFFF',
-              boxShadow: '0 20px 60px rgba(29,63,122,0.12), 0 4px 16px rgba(0,0,0,0.06)',
-            }}
-          >
-            {/* Browser chrome */}
-            <div className="px-5 py-3 flex items-center gap-3" style={{ borderBottom: '1px solid #F1F5F9', background: '#F8FAFC' }}>
-              <div className="flex gap-1.5">
-                <div className="w-3 h-3 rounded-full" style={{ background: '#FDA4AF' }} />
-                <div className="w-3 h-3 rounded-full" style={{ background: '#FCD34D' }} />
-                <div className="w-3 h-3 rounded-full" style={{ background: '#86EFAC' }} />
+          <div className="container relative z-10 px-6">
+            <div className="flex flex-col items-center text-center max-w-[680px] mx-auto">
+              <div className="text-brand-orange text-[10px] font-medium uppercase tracking-[0.4em] mb-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                ● Unified Restaurant OS
               </div>
-              <div className="flex-1 h-5 rounded-md max-w-xs mx-auto" style={{ background: '#E2E8F0' }} />
-            </div>
-
-            {/* Stats row */}
-            <div className="p-6 grid grid-cols-3 gap-4">
-              {[
-                { label: 'Revenue today', value: '$4,821', trend: '↑ 12% vs yesterday', up: true },
-                { label: 'Orders', value: '143', trend: '↑ 8% vs yesterday', up: true },
-                { label: 'Avg ticket', value: '$33.70', trend: '↓ 3% vs yesterday', up: false },
-              ].map((stat) => (
-                <div key={stat.label} className="rounded-xl p-4" style={{ border: '1px solid #E2E8F0', background: '#F8FAFC' }}>
-                  <p className="text-xs mb-2" style={{ color: '#94A3B8' }}>{stat.label}</p>
-                  <p className="text-2xl font-bold" style={{ color: '#0F172A' }}>{stat.value}</p>
-                  <p className="text-xs mt-1 font-medium" style={{ color: stat.up ? '#10B981' : '#F43F5E' }}>{stat.trend}</p>
-                </div>
-              ))}
-            </div>
-
-            {/* Orders + KDS */}
-            <div className="px-6 pb-6 grid grid-cols-12 gap-4">
-              <div className="col-span-7 rounded-xl p-4" style={{ border: '1px solid #E2E8F0', background: '#F8FAFC' }}>
-                <p className="text-xs font-semibold mb-3 tracking-widest" style={{ color: '#94A3B8' }}>LIVE ORDERS</p>
-                <div className="space-y-2">
-                  {[
-                    { table: 'Table 4', items: 'Burger, Fries, Coke', status: 'Cooking', color: orange },
-                    { table: 'Table 7', items: 'Pasta, Salad', status: 'Ready', color: '#10B981' },
-                    { table: 'Delivery #88', items: 'Pizza x2, Wings', status: 'En route', color: '#3B82F6' },
-                    { table: 'Table 2', items: 'Steak, Wine', status: 'New', color: '#8B5CF6' },
-                  ].map((order) => (
-                    <div key={order.table} className="flex items-center justify-between py-1.5" style={{ borderBottom: '1px solid #F1F5F9' }}>
-                      <div>
-                        <p className="text-sm font-semibold" style={{ color: '#0F172A' }}>{order.table}</p>
-                        <p className="text-xs" style={{ color: '#94A3B8' }}>{order.items}</p>
-                      </div>
-                      <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ color: order.color, background: `${order.color}18` }}>{order.status}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="col-span-5 rounded-xl p-4" style={{ border: '1px solid #E2E8F0', background: '#F8FAFC' }}>
-                <p className="text-xs font-semibold mb-3 tracking-widest" style={{ color: '#94A3B8' }}>KITCHEN DISPLAY</p>
-                <div className="space-y-2">
-                  {[
-                    { ticket: '#1042', items: 'Burger, Fries', mins: '4m' },
-                    { ticket: '#1043', items: 'Pasta x2', mins: '7m' },
-                    { ticket: '#1044', items: 'Steak MR', mins: '12m' },
-                  ].map((t) => (
-                    <div key={t.ticket} className="rounded-lg p-2.5" style={{ background: '#FFF4EC', border: `1px solid #FDDCC4` }}>
-                      <div className="flex justify-between items-center">
-                        <span className="text-xs font-bold" style={{ color: navy }}>{t.ticket}</span>
-                        <span className="text-xs font-semibold" style={{ color: orange }}>{t.mins}</span>
-                      </div>
-                      <p className="text-xs mt-0.5" style={{ color: '#64748B' }}>{t.items}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── SOCIAL PROOF ── */}
-      <section className="py-12" style={{ borderTop: '1px solid #E2E8F0', borderBottom: '1px solid #E2E8F0', background: '#FFFFFF' }}>
-        <div className="max-w-5xl mx-auto px-6">
-          <p className="text-center text-xs uppercase tracking-widest mb-8" style={{ color: '#CBD5E1' }}>
-            Trusted by independent restaurants across 40+ cities
-          </p>
-          <div className="flex flex-wrap justify-center gap-x-12 gap-y-4">
-            {['The Rustic Spoon', 'Urban Bites', 'Mango Street', 'Noodle Republic', 'Fire & Salt', 'The Grove'].map((name) => (
-              <span key={name} className="text-sm font-bold tracking-tight" style={{ color: '#CBD5E1' }}>{name}</span>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── FEATURES ── */}
-      <section id="features" className="py-24 px-6" style={{ background: '#F8FAFC' }}>
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
-            <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: orange }}>Everything you need</p>
-            <h2 className="text-4xl md:text-5xl font-black tracking-tight mb-4" style={{ color: '#0F172A' }}>
-              One platform. Zero compromises.
-            </h2>
-            <p className="text-lg max-w-xl mx-auto" style={{ color: '#64748B' }}>
-              Stop duct-taping six different apps together. HeadlessResto is everything your restaurant needs in one system.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {[
-              { icon: <ChefHat className="w-5 h-5" />, title: 'Kitchen Display System', desc: 'Real-time ticket routing to each station. No paper, no shouting. Smart priority queuing so nothing gets cold.', bg: '#FFF4EC', iconColor: orange },
-              { icon: <QrCode className="w-5 h-5" />, title: 'QR & Digital Menu', desc: 'Beautiful mobile menu at your-restaurant.com/menu. Live updates — 86 an item in seconds, everywhere instantly.', bg: '#EEF2FF', iconColor: '#6366F1' },
-              { icon: <BarChart3 className="w-5 h-5" />, title: 'Real-time Analytics', desc: "Revenue, covers, avg ticket, top items — all live. Know what's working before service ends.", bg: '#EFF6FF', iconColor: '#3B82F6' },
-              { icon: <Truck className="w-5 h-5" />, title: 'Delivery Management', desc: 'Built-in dispatch with Uber Direct integration. Track every order from kitchen to door with live GPS.', bg: '#ECFDF5', iconColor: '#10B981' },
-              { icon: <Users className="w-5 h-5" />, title: 'Staff & Scheduling', desc: 'Schedules, GPS clock-in, attendance, and automated payroll summaries. HR done in minutes, not hours.', bg: '#FDF2F8', iconColor: '#EC4899' },
-              { icon: <ShieldCheck className="w-5 h-5" />, title: 'Inventory Control', desc: 'Append-only ledger tracks every stock movement. Low-stock alerts before you run out mid-service.', bg: '#FFFBEB', iconColor: '#F59E0B' },
-              { icon: <CreditCard className="w-5 h-5" />, title: 'Integrated Payments', desc: 'Stripe Connect splits revenue automatically. Accept cards, mobile pay, and digital wallets at every touchpoint.', bg: '#EEF2FF', iconColor: '#4F46E5' },
-              { icon: <Smartphone className="w-5 h-5" />, title: 'Offline-first Mobile', desc: 'Take orders even when the WiFi dies. PowerSync keeps your POS running and syncs everything when reconnected.', bg: '#ECFDF5', iconColor: '#059669' },
-              { icon: <Globe className="w-5 h-5" />, title: 'Multi-location Ready', desc: 'One account, unlimited locations. Different menus, staff, and reporting — all under one dashboard.', bg: '#EFF6FF', iconColor: navy },
-            ].map((feature) => (
-              <div
-                key={feature.title}
-                className="group rounded-2xl p-6 bg-white transition-all duration-300 hover:-translate-y-0.5"
-                style={{ border: '1px solid #E2E8F0', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}
-              >
-                <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center mb-4"
-                  style={{ background: feature.bg, color: feature.iconColor }}
+              <h1 className="text-white animate-in fade-in slide-in-from-bottom-6 duration-1000 mb-8">
+                Less time doing management, more time with your guests
+              </h1>
+              <p className="text-white/60 text-base md:text-lg font-medium mb-10 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-200 max-w-lg mx-auto">
+                The operating system for serious restaurants. Unified KDS, QR ordering, staff scheduling, and delivery in one platform.
+              </p>
+              <div className="flex flex-row items-center gap-3 sm:gap-4 justify-center animate-in fade-in slide-in-from-bottom-10 duration-1000 delay-300">
+                <Button 
+                  onClick={handleTrialClick}
+                  loading={isTrialLoading}
+                  className="h-12 sm:h-14 px-6 sm:px-8 rounded-full bg-brand-orange hover:bg-brand-orange/90 text-white font-medium text-xs sm:text-sm uppercase tracking-tighter shadow-xl transition-all hover:scale-105 active:scale-95"
                 >
-                  {feature.icon}
-                </div>
-                <h3 className="font-bold text-base mb-2" style={{ color: '#0F172A' }}>{feature.title}</h3>
-                <p className="text-sm leading-relaxed" style={{ color: '#64748B' }}>{feature.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── HOW IT WORKS ── */}
-      <section id="how" className="py-24 px-6 bg-white" style={{ borderTop: '1px solid #E2E8F0', borderBottom: '1px solid #E2E8F0' }}>
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-16">
-            <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: orange }}>Simple by design</p>
-            <h2 className="text-4xl md:text-5xl font-black tracking-tight mb-4" style={{ color: '#0F172A' }}>
-              Up and running in 15 minutes
-            </h2>
-          </div>
-          <div className="grid md:grid-cols-3 gap-10">
-            {[
-              { step: '01', title: 'Create your account', desc: 'Sign up, add your restaurant details, and upload your menu. No training required.' },
-              { step: '02', title: 'Configure your setup', desc: 'Set kitchen stations, tables, staff roles, and delivery zones. Everything adapts to your workflow.' },
-              { step: '03', title: 'Go live', desc: 'Print your QR codes, brief your team, open your doors. Your entire operation runs from one screen.' },
-            ].map((step, i) => (
-              <div key={step.step} className="relative">
-                {i < 2 && (
-                  <div className="hidden md:block absolute top-6 left-full w-full h-px -translate-x-8" style={{ background: 'linear-gradient(to right, #E2E8F0, transparent)' }} />
-                )}
-                <div
-                  className="text-5xl font-black mb-4 select-none"
-                  style={{ color: '#F1F5F9' }}
+                  Start free trial
+                </Button>
+                <Button 
+                  onClick={handleDemoClick}
+                  loading={isDemoLoading}
+                  variant="outline" 
+                  className="h-12 sm:h-14 px-6 sm:px-8 rounded-full bg-white/5 border-white/10 text-white font-medium text-[10px] sm:text-xs uppercase tracking-widest transition-all hover:bg-white/10 active:scale-95"
                 >
-                  {step.step}
-                </div>
-                <div className="flex items-center gap-2 mb-3">
-                  <CheckCircle2 className="w-5 h-5 flex-shrink-0" style={{ color: orange }} />
-                  <h3 className="font-bold" style={{ color: '#0F172A' }}>{step.title}</h3>
-                </div>
-                <p className="text-sm leading-relaxed" style={{ color: '#64748B' }}>{step.desc}</p>
+                  Book a demo
+                </Button>
               </div>
-            ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* ── TESTIMONIALS ── */}
-      <section id="testimonials" className="py-24 px-6" style={{ background: '#F8FAFC' }}>
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-16">
-            <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: orange }}>Real results</p>
-            <h2 className="text-4xl md:text-5xl font-black tracking-tight" style={{ color: '#0F172A' }}>
-              Operators who switched never look back
-            </h2>
+        {/* 1. Every Tool Your Team Needs Section */}
+        <section id="features" className="py-32 bg-[#050505] relative overflow-hidden">
+          <div className="container px-6 relative z-10">
+            <div className="text-center max-w-2xl mx-auto mb-16">
+              <div className="text-brand-orange text-[10px] font-medium uppercase tracking-[0.4em] mb-4">● Platform</div>
+              <h2 className="mb-8">Every tool your team needs. One platform.</h2>
+              <p className="text-white/40 text-base font-bold uppercase tracking-tight max-w-2xl mx-auto">From the kitchen screen to the cashier's till — everything talks to each other, in real time, even when the WiFi drops.</p>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              <FeatureItem 
+                icon={<MonitorPlay className="h-6 w-6" />} 
+                title="Kitchen Display (KDS)" 
+                description="Real-time orders on any screen. Bump, hold, and flag items in one tap. Audio alerts on arrival. Dark mode built in for the heat of service." 
+              />
+              <FeatureItem 
+                icon={<QrCode className="h-6 w-6" />} 
+                title="QR Menu & Ordering" 
+                description="Dine-in, takeaway, or delivery — all from one QR code. Customers order and pay themselves. No waiting. No miscommunication." 
+              />
+              <FeatureItem 
+                icon={<Clock className="h-6 w-6" />} 
+                title="Staff Management" 
+                description="Build weekly schedules, detect shift conflicts, and generate payslips automatically. Your admin workload drops to near zero." 
+              />
+              <FeatureItem 
+                icon={<Calculator className="h-6 w-6" />} 
+                title="Cashier POS" 
+                description="A full point of sale — card, cash, split bills. Works offline and syncs the moment you're back online. No lost orders. Ever." 
+              />
+              <FeatureItem 
+                icon={<Zap className="h-6 w-6" />} 
+                title="Uber Direct Delivery" 
+                description="Dispatch a rider in two taps. Live tracking sent to the customer automatically. No third-party tablet cluttering your counter." 
+              />
+              <FeatureItem 
+                icon={<LayoutDashboard className="h-6 w-6" />} 
+                title="Multi-Location" 
+                description="One brand, multiple branches. Each location has its own team, menu, and KDS — with central reporting across all of them." 
+              />
+            </div>
           </div>
-          <div className="grid md:grid-cols-3 gap-5">
-            {[
-              { quote: "We cut our ticket time from 22 minutes to 11 minutes in the first week. The kitchen display alone paid for the whole year.", name: 'Maria Chen', role: 'Owner, Noodle Republic', stars: 5 },
-              { quote: "Managing three locations used to require three different systems and a prayer. Now it's one dashboard. I actually sleep at night.", name: 'James Okafor', role: 'GM, Urban Bites (3 locations)', stars: 5 },
-              { quote: "Our delivery ratings went from 3.8 to 4.7 after switching. Real-time tracking means customers stop calling to ask where their food is.", name: 'Sofia Reyes', role: 'Ops Director, Mango Street', stars: 5 },
-            ].map((t) => (
-              <div
-                key={t.name}
-                className="bg-white rounded-2xl p-6"
-                style={{ border: '1px solid #E2E8F0', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}
-              >
-                <div className="flex gap-1 mb-4">
-                  {Array.from({ length: t.stars }).map((_, i) => (
-                    <Star key={i} className="w-4 h-4" style={{ color: orange, fill: orange }} />
-                  ))}
+        </section>
+
+        {/* 2. Core Modules Section */}
+        <section id="modules" className="py-32 bg-slate-50 relative overflow-hidden border-t border-black/[0.05]">
+          <div className="container px-6 relative z-10">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
+              <div>
+                <div className="text-brand-orange text-[10px] font-medium uppercase tracking-[0.4em] mb-4">● Modules</div>
+                <h2 className="mb-12 text-slate-900">A reliable platform for growth.</h2>
+                <div className="p-8 rounded-[32px] bg-black/[0.02] border border-black/[0.05] mb-10">
+                  <p className="text-slate-500 font-medium leading-relaxed uppercase tracking-tight text-xs">Implement the service for easy and convenient management of your establishment. The interface and functionality are intuitive — every employee from the waiter to the accountant will master HeadlessResto without lengthy training.</p>
                 </div>
-                <p className="text-sm leading-relaxed mb-5" style={{ color: '#475569' }}>"{t.quote}"</p>
-                <div>
-                  <p className="text-sm font-bold" style={{ color: '#0F172A' }}>{t.name}</p>
-                  <p className="text-xs" style={{ color: '#94A3B8' }}>{t.role}</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <ModuleCardV2 light icon={<CreditCard className="h-6 w-6" />} title="Bills" description="Automatic generation and critical operations management." />
+                  <ModuleCardV2 light icon={<BarChart3 className="h-6 w-6" />} title="Profit report" description="Real-time revenue and expense calculation." />
                 </div>
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── PRICING ── */}
-      <section id="pricing" className="py-24 px-6 bg-white" style={{ borderTop: '1px solid #E2E8F0', borderBottom: '1px solid #E2E8F0' }}>
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-16">
-            <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: orange }}>Simple pricing</p>
-            <h2 className="text-4xl md:text-5xl font-black tracking-tight mb-4" style={{ color: '#0F172A' }}>No hidden fees. No surprises.</h2>
-            <p className="text-lg" style={{ color: '#64748B' }}>All plans include unlimited orders, POS, KDS, and QR menus.</p>
-          </div>
-          <div className="grid md:grid-cols-3 gap-5 items-start">
-            {[
-              {
-                name: 'Starter', price: '$89', period: '/mo',
-                desc: 'Perfect for a single-location café or quick service.',
-                features: ['1 location', 'Up to 10 staff', 'POS + KDS + QR Menu', 'Basic analytics', 'Email support'],
-                cta: 'Start free trial', highlight: false,
-              },
-              {
-                name: 'Growth', price: '$199', period: '/mo',
-                desc: 'For full-service restaurants that want every feature.',
-                features: ['3 locations', 'Unlimited staff', 'Everything in Starter', 'Delivery dispatch', 'Payroll summaries', 'Inventory tracking', 'Priority support'],
-                cta: 'Start free trial', highlight: true, badge: 'Most popular',
-              },
-              {
-                name: 'Scale', price: '$449', period: '/mo',
-                desc: 'Multi-location groups and franchise operations.',
-                features: ['Unlimited locations', 'Unlimited staff', 'Everything in Growth', 'Custom integrations', 'Dedicated CSM', 'SLA guarantee'],
-                cta: 'Talk to sales', highlight: false,
-              },
-            ].map((plan) => (
-              <div
-                key={plan.name}
-                className="relative rounded-2xl p-7"
-                style={plan.highlight
-                  ? { background: navy, border: `2px solid ${navy}`, boxShadow: `0 12px 40px rgba(29,63,122,0.25)` }
-                  : { background: '#FFFFFF', border: '1.5px solid #E2E8F0', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }
-                }
-              >
-                {plan.badge && (
-                  <div
-                    className="absolute -top-3.5 left-1/2 -translate-x-1/2 text-white text-xs font-bold px-3 py-1 rounded-full"
-                    style={{ background: orange }}
-                  >
-                    {plan.badge}
+              <div className="relative">
+                <div className="relative z-10 grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <ModuleCardV2 light icon={<UtensilsCrossed className="h-6 w-6" />} title="Inventory" description="Real-time stock level updates and automated deductions." className="sm:mt-12" />
+                  <ModuleCardV2 light icon={<Calculator className="h-6 w-6" />} title="Cash management" description="Record all operations and track cash flow across terminals." />
+                  <ModuleCardV2 light icon={<User className="h-6 w-6" />} title="Staff" description="Log employee actions and manage critical operations access." className="sm:-mt-12" />
+                  <div className="p-8 rounded-[32px] bg-brand-orange flex items-center justify-center group cursor-pointer hover:bg-amber-500 transition-all min-h-[160px]">
+                    <div className="text-center">
+                      <div className="text-white/40 text-[10px] font-medium uppercase tracking-widest mb-2">Explore All</div>
+                      <div className="flex items-center justify-center gap-2">
+                        <span className="text-white font-medium uppercase tracking-tighter text-xl">Full Platform</span>
+                        <ArrowRight className="h-6 w-6 text-white group-hover:translate-x-2 transition-transform" />
+                      </div>
+                    </div>
                   </div>
-                )}
-                <p className="text-sm font-semibold mb-1" style={{ color: plan.highlight ? 'rgba(255,255,255,0.6)' : '#64748B' }}>{plan.name}</p>
-                <div className="flex items-baseline gap-1 mb-2">
-                  <span className="text-4xl font-black" style={{ color: plan.highlight ? '#FFFFFF' : '#0F172A' }}>{plan.price}</span>
-                  <span className="text-sm" style={{ color: plan.highlight ? 'rgba(255,255,255,0.5)' : '#94A3B8' }}>{plan.period}</span>
                 </div>
-                <p className="text-sm mb-6" style={{ color: plan.highlight ? 'rgba(255,255,255,0.6)' : '#64748B' }}>{plan.desc}</p>
-                <Link
-                  href="/register"
-                  className="block text-center text-sm font-bold py-3 rounded-xl mb-6 transition-all hover:opacity-90"
-                  style={plan.highlight
-                    ? { background: orange, color: '#FFFFFF' }
-                    : { background: '#F1F5F9', color: navy, border: `1px solid #E2E8F0` }
-                  }
-                >
-                  {plan.cta}
-                </Link>
-                <ul className="space-y-2.5">
-                  {plan.features.map((f) => (
-                    <li key={f} className="flex items-center gap-2.5 text-sm">
-                      <CheckCircle2
-                        className="w-4 h-4 flex-shrink-0"
-                        style={{ color: plan.highlight ? orange : '#CBD5E1' }}
-                      />
-                      <span style={{ color: plan.highlight ? 'rgba(255,255,255,0.8)' : '#475569' }}>{f}</span>
-                    </li>
-                  ))}
-                </ul>
+                {/* Decorative Elements */}
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-brand-orange/5 rounded-full blur-[120px] -z-10" />
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── STATS ── */}
-      <section className="py-20 px-6" style={{ background: '#F8FAFC' }}>
-        <div className="max-w-4xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-          {[
-            { value: '2,400+', label: 'Restaurants powered' },
-            { value: '$180M+', label: 'Orders processed' },
-            { value: '40+', label: 'Cities live' },
-            { value: '99.9%', label: 'Uptime SLA' },
-          ].map((s) => (
-            <div key={s.label}>
-              <p className="text-3xl md:text-4xl font-black mb-1" style={{ color: navy }}>{s.value}</p>
-              <p className="text-sm" style={{ color: '#64748B' }}>{s.label}</p>
             </div>
-          ))}
-        </div>
-      </section>
+          </div>
+        </section>
 
-      {/* ── CTA ── */}
-      <section className="py-24 px-6 bg-white" style={{ borderTop: '1px solid #E2E8F0' }}>
-        <div className="max-w-3xl mx-auto text-center">
-          <div
-            className="rounded-3xl p-12"
-            style={{ background: `linear-gradient(135deg, ${navy} 0%, #2D5BA0 100%)`, boxShadow: `0 20px 60px rgba(29,63,122,0.3)` }}
-          >
-            <Clock className="w-10 h-10 mx-auto mb-6" style={{ color: orange }} />
-            <h2 className="text-3xl md:text-4xl font-black tracking-tight mb-4 text-white">
-              Ready to take control of your restaurant?
-            </h2>
-            <p className="mb-8 text-lg" style={{ color: 'rgba(255,255,255,0.65)' }}>
-              Join 2,400+ restaurants who've stopped fighting their software and started growing their business.
+        {/* 3. Built for Everyone in the Building (Existing Roles) */}
+        <section id="operators" className="py-32 bg-white relative overflow-hidden border-t border-black/[0.05]">
+          <div className="container px-6 relative z-10">
+            <div className="flex flex-col md:flex-row md:items-end justify-between mb-24 gap-8">
+              <div className="max-w-2xl">
+                <div className="text-brand-orange text-[11px] font-medium uppercase tracking-[0.4em] mb-4">● Roles</div>
+                <h2 className="mb-8 text-slate-900">Built for everyone in the building.</h2>
+              </div>
+              <p className="text-slate-500 text-lg font-bold max-w-sm uppercase tracking-tight">Each role gets an interface built around their job — not a watered-down version of the admin panel.</p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+              <RoleCard
+                light
+                icon={<User className="h-12 w-12" />}
+                title="Admin / Owner"
+                description="See everything. Control everything. Manage your menu, staff, payroll, and Stripe payouts from one dashboard — across every location you run."
+              />
+              <RoleCard
+                light
+                icon={<ChefHat className="h-12 w-12" />}
+                title="Kitchen Staff"
+                description="A big screen built to be read from across the pass. New order alerts, one-tap bump buttons, and nothing cluttering the view during a busy service."
+              />
+              <RoleCard
+                light
+                icon={<Utensils className="h-12 w-12" />}
+                title="Waiter"
+                description="Take orders at the table from any device. Orders go straight to the kitchen. No paper, no shouting, no re-keying the same order twice."
+              />
+              <RoleCard
+                light
+                icon={<CreditCard className="h-12 w-12" />}
+                title="Cashier"
+                description="A fast, no-fuss POS with card, cash, Apple Pay, and split bills. Unsynced offline orders queue automatically and send when you're back online."
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* 4. Pricing Section (Existing) */}
+        <section id="pricing" className="py-32 bg-slate-50 relative overflow-hidden border-t border-black/[0.05]">
+          <div className="container px-6 relative z-10">
+            <div className="flex flex-col md:flex-row md:items-end justify-between mb-24 gap-8">
+              <div className="max-w-2xl">
+                <div className="text-brand-orange text-[11px] font-medium uppercase tracking-[0.4em] mb-4">● Pricing</div>
+                <h2 className="mb-8 text-slate-900">Simple pricing. No hidden fees.</h2>
+              </div>
+              <p className="text-slate-500 text-lg font-bold max-w-sm uppercase tracking-tight">One flat monthly fee per location. No per-order commissions. No surprise charges at the end of the month.</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <PricingCard
+                light
+                title="Starter"
+                price="$79"
+                description="Everything you need to get your first location running properly. KDS, QR menu, POS, and Stripe payments included."
+                features={["KDS + POS + QR Menu", "Up to 5 staff members", "Stripe payments", "Basic reports"]}
+                ctaText="Start free trial"
+                featured={false}
+                href="/signup"
+              />
+              <PricingCard
+                light
+                title="Operator"
+                price="$149"
+                description="For teams that need more. Unlimited staff, Uber Direct delivery, automatic payslips, and full offline support."
+                features={["Everything in Starter", "Unlimited staff", "Uber Direct delivery", "Payslip generation", "Full offline support"]}
+                ctaText="Start free trial"
+                featured={true}
+                href="/signup"
+              />
+              <PricingCard
+                light
+                title="Enterprise"
+                price="Custom"
+                description="For multi-location groups and franchises. Custom integrations, priority support, and volume discounts."
+                features={["Multiple locations", "Custom integrations", "Dedicated manager", "Franchise reporting", "SLA guarantees"]}
+                ctaText="Talk to sales"
+                featured={false}
+                href="/contact"
+              />
+            </div>
+            <p className="text-slate-400 text-center text-sm font-bold uppercase tracking-tight mt-16">Free for 30 days. No credit card required.</p>
+          </div>
+        </section>
+
+        {/* 5. Final Contact/Waitlist Section */}
+        <section id="contact" className="py-32 bg-white relative overflow-hidden border-t border-black/[0.05]">
+          <div className="container px-6 relative z-10">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
+                <div className="max-w-2xl">
+                  <div className="text-brand-orange text-[11px] font-medium uppercase tracking-[0.4em] mb-4">● Support</div>
+                <h2 className="mb-8 text-slate-900">
+                   Create the best experience for guests
+                </h2>
+                <p className="text-slate-500 text-xl font-medium max-w-md mb-12 uppercase tracking-tight">
+                  QR menu, chat with the waiter, and instant orders in one system. Set up your restaurant in minutes.
+                </p>
+                <div className="space-y-6">
+                  <div className="flex items-center gap-4">
+                    <div className="h-12 w-12 rounded-full bg-brand-orange/10 flex items-center justify-center text-brand-orange">
+                      <Check className="h-6 w-6" />
+                    </div>
+                    <p className="text-slate-600 font-bold uppercase tracking-tight text-sm">30-day free trial</p>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="h-12 w-12 rounded-full bg-brand-orange/10 flex items-center justify-center text-brand-orange">
+                      <Check className="h-6 w-6" />
+                    </div>
+                    <p className="text-slate-600 font-bold uppercase tracking-tight text-sm">No credit card required</p>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-slate-50 p-10 rounded-[40px] border border-black/[0.05] shadow-2xl shadow-black/5">
+                <RestaurantInterestForm light />
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      {/* Footer Redesign */}
+      <footer className="bg-white py-24 border-t border-black/[0.05] text-slate-900">
+        <div className="container px-6">
+          <div className="flex flex-col md:flex-row justify-between items-start gap-12">
+            <div className="space-y-6 max-w-sm">
+              <div className="flex items-center gap-3">
+                <Image 
+                  src="/Source/media/5.png" 
+                  alt="HeadlessResto Logo" 
+                  width={140} 
+                  height={40} 
+                  className="h-10 w-auto object-contain brightness-0" 
+                />
+              </div>
+              <p className="text-slate-500 font-bold uppercase tracking-tight leading-relaxed text-sm">
+                Run a tighter operation. More time with your guests.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-24">
+              <div className="space-y-6">
+                <h4 className="text-brand-orange text-[10px] font-medium uppercase tracking-[0.3em]">Platform</h4>
+                <div className="flex flex-col gap-4 text-sm font-bold uppercase tracking-widest text-slate-400">
+                  <Link href="#features" className="hover:text-slate-900 transition-colors">Features</Link>
+                  <Link href="#operators" className="hover:text-slate-900 transition-colors">Operators</Link>
+                  <Link href="#pricing" className="hover:text-slate-900 transition-colors">Pricing</Link>
+                  <Link href="/demo" className="hover:text-slate-900 transition-colors">Live Demo</Link>
+                </div>
+              </div>
+              <div className="space-y-6">
+                <h4 className="text-brand-orange text-[10px] font-medium uppercase tracking-[0.3em]">Company</h4>
+                <div className="flex flex-col gap-4 text-sm font-bold uppercase tracking-widest text-slate-400">
+                  <Link href="/about" className="hover:text-slate-900 transition-colors">About</Link>
+                  <Link href="/blog" className="hover:text-slate-900 transition-colors">Blog</Link>
+                </div>
+              </div>
+              <div className="space-y-6">
+                <h4 className="text-brand-orange text-[10px] font-medium uppercase tracking-[0.3em]">Legal</h4>
+                <div className="flex flex-col gap-4 text-sm font-bold uppercase tracking-widest text-slate-400">
+                  <Link href="/privacy" className="hover:text-slate-900 transition-colors">Privacy</Link>
+                  <Link href="/terms" className="hover:text-slate-900 transition-colors">Terms</Link>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="mt-24 pt-10 border-t border-black/5 flex flex-col md:flex-row justify-between items-center gap-8">
+            <p className="text-[10px] font-medium uppercase tracking-[0.3em] text-slate-300">
+              © {new Date().getFullYear()} HeadlessResto Inc. All rights reserved.
             </p>
-            <Link
-              href="/register"
-              className="group inline-flex items-center gap-2 font-bold px-10 py-4 rounded-xl text-base text-white transition-opacity hover:opacity-90"
-              style={{ backgroundColor: orange }}
-            >
-              Start your 30-day free trial
-              <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-            </Link>
-            <p className="mt-4 text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>No credit card required. Cancel anytime.</p>
+            <div className="flex items-center gap-10">
+              <Link href="#" className="text-slate-300 hover:text-slate-900 transition-colors"><Zap className="h-5 w-5" /></Link>
+              <Link href="#" className="text-slate-300 hover:text-slate-900 transition-colors"><ShieldCheck className="h-5 w-5" /></Link>
+              <Link href="#" className="text-slate-300 hover:text-slate-900 transition-colors"><BarChart3 className="h-5 w-5" /></Link>
+            </div>
           </div>
-        </div>
-      </section>
-
-      {/* ── FOOTER ── */}
-      <footer className="py-12 px-6" style={{ borderTop: '1px solid #E2E8F0', background: '#F8FAFC' }}>
-        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.png" alt="HeadlessResto" style={{ height: 34, width: 'auto' }} />
-          <div className="flex gap-8 text-sm">
-            {['Privacy', 'Terms', 'Status', 'Docs'].map((l) => (
-              <a key={l} href="#" className="transition-colors hover:text-[#1D3F7A]" style={{ color: '#94A3B8' }}>{l}</a>
-            ))}
-          </div>
-          <p className="text-sm" style={{ color: '#CBD5E1' }}>© 2026 HeadlessResto. All rights reserved.</p>
         </div>
       </footer>
     </div>
   );
 }
+
+function RoleCard({ icon, title, description, light = false }: { 
+  icon: React.ReactNode; 
+  title: string; 
+  description: string;
+  light?: boolean;
+}) {
+  return (
+    <div className={`flex flex-col items-center text-center p-8 rounded-3xl border transition-all duration-500 group ${
+      light 
+        ? 'bg-black/[0.02] border-black/[0.05] hover:bg-black/[0.04]' 
+        : 'bg-white/[0.02] border-white/[0.05] hover:bg-white/[0.04]'
+    }`}>
+      <div className="mb-6 text-brand-orange group-hover:scale-110 transition-transform duration-500">
+        {icon}
+      </div>
+      <h4 className={`text-2xl font-medium mb-2 uppercase tracking-tighter transition-colors ${
+        light ? 'text-slate-900 group-hover:text-brand-orange' : 'text-white group-hover:text-amber-500'
+      }`}>{title}</h4>
+      <p className={`font-bold text-sm leading-relaxed uppercase tracking-tight ${
+        light ? 'text-slate-500' : 'text-white/30'
+      }`}>{description}</p>
+    </div>
+  );
+}
+
+function PricingCard({ title, price, description, features, ctaText, featured, href, light = false }: {
+  title: string;
+  price: string;
+  description: string;
+  features: string[];
+  ctaText: string;
+  featured: boolean;
+  href: string;
+  light?: boolean;
+}) {
+  return (
+    <div className={`flex flex-col p-8 rounded-3xl border transition-all duration-500 group ${
+      featured 
+        ? 'border-brand-orange ' + (light ? 'bg-brand-orange/[0.02]' : 'bg-white/[0.05]')
+        : (light ? 'border-black/[0.05] bg-black/[0.02] hover:bg-black/[0.04]' : 'border-white/[0.05] bg-white/[0.02] hover:bg-white/[0.04]')
+    }`}>
+      {featured && (
+        <div className="text-brand-orange text-[11px] font-medium uppercase tracking-[0.4em] mb-4">Most popular</div>
+      )}
+      <h4 className={`text-3xl font-medium mb-2 uppercase tracking-tighter ${
+        light ? 'text-slate-900' : 'text-white'
+      }`}>{title}</h4>
+      <p className={`font-bold text-sm leading-relaxed uppercase tracking-tight mb-6 ${
+        light ? 'text-slate-500' : 'text-white/30'
+      }`}>{description}</p>
+      <div className={`text-5xl font-medium uppercase tracking-tighter mb-8 ${
+        light ? 'text-slate-900' : 'text-white'
+      }`}>{price} <span className={light ? 'text-slate-400 text-lg' : 'text-white/30 text-lg'}>/ mo per location</span></div>
+      <ul className="flex flex-col gap-4 mb-8">
+        {features.map((feature, index) => (
+          <li key={index} className={`flex items-center font-bold text-sm uppercase tracking-tight ${
+            light ? 'text-slate-600' : 'text-white/70'
+          }`}>
+            <Check className="h-4 w-4 mr-2 text-brand-orange" /> {feature}
+          </li>
+        ))}
+      </ul>
+      <Link 
+        href={href}
+        className={`mt-auto w-full py-4 rounded-full font-bold uppercase tracking-widest text-sm text-center transition-colors ${
+          featured 
+            ? 'bg-brand-orange hover:bg-amber-500 text-white' 
+            : (light ? 'bg-black/[0.05] hover:bg-black/[0.1] text-slate-900' : 'bg-white/[0.05] hover:bg-white/[0.1] text-white')
+        }`}
+      >
+        {ctaText}
+      </Link>
+    </div>
+  );
+}
+
+function FeatureItem({ icon, title, description }: { 
+  icon: React.ReactNode; 
+  title: string; 
+  description: string;
+}) {
+  return (
+    <div className="flex gap-8 group">
+      <div className="mt-1 bg-amber-500/10 p-4 rounded-2xl text-amber-500 h-fit group-hover:scale-110 group-hover:bg-amber-500 group-hover:text-black transition-all duration-500 shadow-[0_0_20px_rgba(245,158,11,0.1)] group-hover:shadow-[0_0_30px_rgba(245,158,11,0.3)]">
+        {icon}
+      </div>
+      <div>
+        <h4 className="text-2xl font-medium mb-2 uppercase tracking-tighter text-white group-hover:text-amber-500 transition-colors">{title}</h4>
+        <p className="text-white/30 font-bold text-sm leading-relaxed uppercase tracking-tight">{description}</p>
+      </div>
+    </div>
+  );
+}
+
