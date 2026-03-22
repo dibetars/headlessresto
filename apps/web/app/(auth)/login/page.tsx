@@ -45,7 +45,7 @@ export default function LoginPage({ searchParams }: { searchParams: { error?: st
         <div className="text-center text-sm text-gray-500">
           <a href="/auth/forgot-password" title="Forgot Password" className="hover:underline">Forgot password?</a>
           <div className="mt-4">
-            Don't have an account? <a href="/signup" className="hover:underline text-primary font-semibold">Sign Up</a>
+            Don't have an account? <a href="/get-started" className="hover:underline text-primary font-semibold">Get started</a>
           </div>
         </div>
       </div>

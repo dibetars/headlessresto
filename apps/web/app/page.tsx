@@ -27,6 +27,7 @@ import {
   LayoutDashboard,
   ChefHat
 } from "lucide-react";
+import { submitLeadAction } from "@/app/auth/actions";
 
 function HeroVideoCarousel() {
   const videos = [
@@ -112,24 +113,11 @@ function RestaurantInterestForm({ light = false }: { light?: boolean }) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setStatus("submitting");
-    
-    try {
-      // In a real app, we'd use a server action or API route
-      // For now, we simulate the submission to the super admin dashboard
-      console.log("Submitting to Super Admin Dashboard:", formData);
-      
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
+    const result = await submitLeadAction({ ...formData, source: "homepage" });
+    if (result.success) {
       setStatus("success");
-      setFormData({
-        restaurantName: "",
-        contactPerson: "",
-        email: "",
-        phone: "",
-      });
-    } catch (error) {
-      console.error("Submission error:", error);
+      setFormData({ restaurantName: "", contactPerson: "", email: "", phone: "" });
+    } else {
       setStatus("error");
     }
   };
@@ -206,14 +194,20 @@ function RestaurantInterestForm({ light = false }: { light?: boolean }) {
           </div>
         </div>
       </div>
-      <Button 
-        type="submit" 
+      {status === "error" && (
+        <p className={`text-xs font-medium ${light ? 'text-red-500' : 'text-red-400'}`}>
+          Something went wrong. Please try again.
+        </p>
+      )}
+      <Button
+        type="submit"
         disabled={status === "submitting" || status === "success"}
         className="w-full h-16 rounded-2xl bg-brand-orange hover:bg-amber-500 text-white font-medium text-sm uppercase tracking-widest mt-6 transition-all active:scale-95 disabled:opacity-50"
       >
         {status === "idle" && "Set up the service"}
         {status === "submitting" && "Submitting..."}
         {status === "success" && "Success! We'll be in touch."}
+        {status === "error" && "Try again"}
       </Button>
     </form>
   );
@@ -231,7 +225,7 @@ export default function Home() {
     e.preventDefault();
     setIsTrialLoading(true);
     setTimeout(() => {
-      router.push("/signup");
+      router.push("/get-started");
     }, 800);
   };
 
@@ -239,16 +233,15 @@ export default function Home() {
     e.preventDefault();
     setIsGetStartedLoading(true);
     setTimeout(() => {
-      router.push("/signup");
+      router.push("/get-started");
     }, 800);
   };
 
   const handleDemoClick = (e: React.MouseEvent) => {
     e.preventDefault();
     setIsDemoLoading(true);
-    // Give it a small delay for the "loading" feel as requested
     setTimeout(() => {
-      router.push("/demo");
+      router.push("/book-demo");
     }, 800);
   };
 
@@ -470,7 +463,7 @@ export default function Home() {
                 features={["KDS + POS + QR Menu", "Up to 5 staff members", "Stripe payments", "Basic reports"]}
                 ctaText="Start free trial"
                 featured={false}
-                href="/signup"
+                href="/get-started?plan=starter"
               />
               <PricingCard
                 light
@@ -480,7 +473,7 @@ export default function Home() {
                 features={["Everything in Starter", "Unlimited staff", "Uber Direct delivery", "Payslip generation", "Full offline support"]}
                 ctaText="Start free trial"
                 featured={true}
-                href="/signup"
+                href="/get-started?plan=operator"
               />
               <PricingCard
                 light
@@ -558,6 +551,7 @@ export default function Home() {
                   <Link href="#operators" className="hover:text-slate-900 transition-colors">Operators</Link>
                   <Link href="#pricing" className="hover:text-slate-900 transition-colors">Pricing</Link>
                   <Link href="/demo" className="hover:text-slate-900 transition-colors">Live Demo</Link>
+                  <Link href="/book-demo" className="hover:text-slate-900 transition-colors">Book a Demo</Link>
                 </div>
               </div>
               <div className="space-y-6">

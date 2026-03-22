@@ -42,6 +42,7 @@ import {
   SheetDescription 
 } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
+import { getOrders, updateOrderStatusAction } from '@/app/auth/actions'
 
 interface OrderItem {
   id: string
@@ -95,34 +96,8 @@ export default function DashboardOrdersPage() {
   const fetchOrders = async () => {
     try {
       setLoading(true)
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-
-      const { data: profile } = await supabase
-        .from('users')
-        .select('restaurant_id')
-        .eq('id', user.id)
-        .single()
-
-      const { data, error } = await supabase
-        .from('orders')
-        .select(`
-          *,
-          order_items (
-            id,
-            quantity,
-            price,
-            menu_items (
-              name,
-              category
-            )
-          )
-        `)
-        .eq('restaurant_id', profile?.restaurant_id)
-        .order('created_at', { ascending: false })
-
-      if (error) throw error
-      setOrders(data || [])
+      const data = await getOrders()
+      setOrders(data as Order[])
     } catch (error: any) {
       console.error('Error fetching orders:', error.message)
     } finally {
@@ -132,17 +107,12 @@ export default function DashboardOrdersPage() {
 
   const updateOrderStatus = async (orderId: string, newStatus: string) => {
     try {
-      const { error } = await supabase
-        .from('orders')
-        .update({ status: newStatus })
-        .eq('id', orderId)
+      await updateOrderStatusAction(orderId, newStatus)
 
-      if (error) throw error
-      
       if (selectedOrder?.id === orderId) {
         setSelectedOrder({ ...selectedOrder, status: newStatus as any })
       }
-      
+
       fetchOrders()
     } catch (error: any) {
       alert('Error updating order status: ' + error.message)
@@ -205,12 +175,12 @@ export default function DashboardOrdersPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'pending': return 'bg-amber-500/10 text-amber-500'
-      case 'preparing': return 'bg-brand-orange/10 text-brand-orange'
-      case 'ready': return 'bg-emerald-500/10 text-emerald-500'
-      case 'completed': return 'bg-white/10 text-white/40'
-      case 'cancelled': return 'bg-rose-500/10 text-rose-500'
-      default: return 'bg-white/10 text-white'
+      case 'pending': return 'bg-amber-50 text-amber-600'
+      case 'preparing': return 'bg-orange-50 text-brand-orange'
+      case 'ready': return 'bg-emerald-50 text-emerald-600'
+      case 'completed': return 'bg-gray-100 text-gray-400'
+      case 'cancelled': return 'bg-rose-50 text-rose-500'
+      default: return 'bg-gray-100 text-gray-500'
     }
   }
 
@@ -231,101 +201,100 @@ export default function DashboardOrdersPage() {
   }
 
   return (
-    <div className="space-y-10 pb-16 min-h-screen bg-[#020202] text-white p-6 md:p-10 animate-in fade-in duration-700">
+    <div className="space-y-6 animate-in fade-in duration-500">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-5xl lg:text-6xl font-black tracking-tighter text-white uppercase italic leading-none">Order Management</h1>
-          <p className="text-white/40 font-bold mt-4 uppercase tracking-[0.2em] text-[10px] max-w-md">Track, process, and manage live orders from all channels in real-time.</p>
+          <h1 className="text-2xl font-bold text-gray-900">Order Management</h1>
+          <p className="text-gray-500 text-sm mt-1">Track, process, and manage live orders from all channels in real-time.</p>
         </div>
-        <div className="flex items-center gap-4">
-          <Button 
-            onClick={fetchOrders}
-            className="h-20 px-12 rounded-[32px] bg-white/5 hover:bg-white/10 text-white font-black text-xl flex items-center gap-4 transition-all hover:scale-105 active:scale-95 border border-white/10 uppercase italic tracking-tighter"
-          >
-            Refresh
-          </Button>
-        </div>
+        <Button
+          onClick={fetchOrders}
+          variant="outline"
+          className="h-10 px-6 rounded-xl font-semibold text-sm"
+        >
+          Refresh
+        </Button>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-        <Card className="glass-morphism-dark border-white/[0.08] rounded-[40px] p-2 group hover:bg-white/[0.05] transition-all duration-500">
-          <CardContent className="pt-8">
-            <div className="flex items-center justify-between mb-6">
-              <div className="w-14 h-14 bg-amber-500/10 rounded-2xl flex items-center justify-center text-amber-500 group-hover:scale-110 transition-transform duration-500">
-                <ShoppingBag className="w-7 h-7" />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="bg-white border border-gray-100 rounded-2xl">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center text-amber-500">
+                <ShoppingBag className="w-5 h-5" />
               </div>
-              <Badge className="bg-amber-500/10 text-amber-500 font-black border-none uppercase tracking-widest text-[10px] py-1.5 px-3">TOTAL</Badge>
+              <Badge className="bg-amber-50 text-amber-600 font-semibold border-none uppercase tracking-wide text-[10px]">TOTAL</Badge>
             </div>
-            <div className="text-6xl font-black text-white italic tracking-tighter">{stats.total}</div>
-            <div className="text-[10px] font-black text-white/30 mt-3 uppercase tracking-[0.2em]">Orders today</div>
+            <div className="text-3xl font-black text-gray-900">{stats.total}</div>
+            <div className="text-xs text-gray-400 mt-1 uppercase tracking-wide">Orders today</div>
           </CardContent>
         </Card>
 
-        <Card className="glass-morphism-dark border-white/[0.08] rounded-[40px] p-2 group hover:bg-white/[0.05] transition-all duration-500">
-          <CardContent className="pt-8">
-            <div className="flex items-center justify-between mb-6">
-              <div className="w-14 h-14 bg-brand-orange/10 rounded-2xl flex items-center justify-center text-brand-orange group-hover:scale-110 transition-transform duration-500">
-                <Clock className="w-7 h-7" />
+        <Card className="bg-white border border-gray-100 rounded-2xl">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-10 h-10 bg-brand-orange/10 rounded-xl flex items-center justify-center text-brand-orange">
+                <Clock className="w-5 h-5" />
               </div>
-              <Badge className="bg-brand-orange/10 text-brand-orange font-black border-none uppercase tracking-widest text-[10px] py-1.5 px-3">ACTIVE</Badge>
+              <Badge className="bg-brand-orange/10 text-brand-orange font-semibold border-none uppercase tracking-wide text-[10px]">ACTIVE</Badge>
             </div>
-            <div className="text-6xl font-black text-white italic tracking-tighter">{stats.active + stats.pending}</div>
-            <div className="text-[10px] font-black text-white/30 mt-3 uppercase tracking-[0.2em]">Live processing</div>
+            <div className="text-3xl font-black text-gray-900">{stats.active + stats.pending}</div>
+            <div className="text-xs text-gray-400 mt-1 uppercase tracking-wide">Live processing</div>
           </CardContent>
         </Card>
 
-        <Card className="glass-morphism-dark border-white/[0.08] rounded-[40px] p-2 group hover:bg-white/[0.05] transition-all duration-500">
-          <CardContent className="pt-8">
-            <div className="flex items-center justify-between mb-6">
-              <div className="w-14 h-14 bg-emerald-500/10 rounded-2xl flex items-center justify-center text-emerald-500 group-hover:scale-110 transition-transform duration-500">
-                <DollarSign className="w-7 h-7" />
+        <Card className="bg-white border border-gray-100 rounded-2xl">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-500">
+                <DollarSign className="w-5 h-5" />
               </div>
-              <Badge className="bg-emerald-500/10 text-emerald-500 font-black border-none uppercase tracking-widest text-[10px] py-1.5 px-3">REVENUE</Badge>
+              <Badge className="bg-emerald-50 text-emerald-600 font-semibold border-none uppercase tracking-wide text-[10px]">REVENUE</Badge>
             </div>
-            <div className="text-6xl font-black text-white italic tracking-tighter">${stats.revenue.toFixed(2)}</div>
-            <div className="text-[10px] font-black text-white/30 mt-3 uppercase tracking-[0.2em]">Completed sales</div>
+            <div className="text-3xl font-black text-gray-900">${stats.revenue.toFixed(2)}</div>
+            <div className="text-xs text-gray-400 mt-1 uppercase tracking-wide">Completed sales</div>
           </CardContent>
         </Card>
 
-        <Card className="glass-morphism-dark border-white/[0.08] rounded-[40px] p-2 group hover:bg-white/[0.05] transition-all duration-500">
-          <CardContent className="pt-8">
-            <div className="flex items-center justify-between mb-6">
-              <div className="w-14 h-14 bg-purple-500/10 rounded-2xl flex items-center justify-center text-purple-500 group-hover:scale-110 transition-transform duration-500">
-                <Calendar className="w-7 h-7" />
+        <Card className="bg-white border border-gray-100 rounded-2xl">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center text-purple-500">
+                <Calendar className="w-5 h-5" />
               </div>
-              <Badge className="bg-purple-500/10 text-purple-500 font-black border-none uppercase tracking-widest text-[10px] py-1.5 px-3">DATE</Badge>
+              <Badge className="bg-purple-50 text-purple-600 font-semibold border-none uppercase tracking-wide text-[10px]">DATE</Badge>
             </div>
-            <div className="text-4xl font-black text-white italic tracking-tighter uppercase">
+            <div className="text-2xl font-black text-gray-900 uppercase">
               {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
             </div>
-            <div className="text-[10px] font-black text-white/30 mt-3 uppercase tracking-[0.2em]">Management Session</div>
+            <div className="text-xs text-gray-400 mt-1 uppercase tracking-wide">Management session</div>
           </CardContent>
         </Card>
       </div>
 
       {/* Filters & Orders Table */}
-      <Card className="glass-morphism-dark border-white/[0.05] rounded-[48px] overflow-hidden">
-        <CardHeader className="p-10 border-b border-white/[0.05]">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
-            <div className="relative flex-1 max-w-xl group">
-              <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-6 h-6 text-white/20 group-focus-within:text-amber-500 transition-colors" />
-              <Input 
-                placeholder="Search by ID or Table..." 
+      <Card className="bg-white border border-gray-100 rounded-2xl overflow-hidden">
+        <CardHeader className="p-6 border-b border-gray-100">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Input
+                placeholder="Search by ID or Table..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-16 h-18 bg-white/[0.03] border-white/[0.08] rounded-[24px] font-bold text-white placeholder:text-white/20 focus:ring-amber-500/20 focus:border-amber-500/50 transition-all text-xl"
+                className="pl-11 bg-gray-50 border-gray-200 rounded-xl text-sm"
               />
             </div>
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => setSelectedStatus(null)}
                 className={cn(
-                  "px-6 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] transition-all duration-300 border italic",
-                  selectedStatus === null 
-                    ? "bg-amber-500 border-amber-400 text-black" 
-                    : "bg-white/[0.03] border-white/[0.08] text-white/40 hover:text-white"
+                  "px-4 py-1.5 rounded-lg font-semibold uppercase tracking-wider text-[10px] transition-all border",
+                  selectedStatus === null
+                    ? "bg-brand-orange border-brand-orange text-white"
+                    : "bg-white border-gray-200 text-gray-500 hover:border-gray-300"
                 )}
               >
                 All
@@ -335,10 +304,10 @@ export default function DashboardOrdersPage() {
                   key={status}
                   onClick={() => setSelectedStatus(status)}
                   className={cn(
-                    "px-6 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] transition-all duration-300 border italic",
-                    selectedStatus === status 
-                      ? "bg-amber-500 border-amber-400 text-black" 
-                      : "bg-white/[0.03] border-white/[0.08] text-white/40 hover:text-white"
+                    "px-4 py-1.5 rounded-lg font-semibold uppercase tracking-wider text-[10px] transition-all border",
+                    selectedStatus === status
+                      ? "bg-brand-orange border-brand-orange text-white"
+                      : "bg-white border-gray-200 text-gray-500 hover:border-gray-300"
                   )}
                 >
                   {status}
@@ -350,78 +319,78 @@ export default function DashboardOrdersPage() {
         <CardContent className="p-0">
           <Table>
             <TableHeader>
-              <TableRow className="border-b border-white/[0.05] hover:bg-transparent">
-                <TableHead className="py-8 px-10 text-[10px] font-black text-white/30 uppercase tracking-[0.25em]">Order Details</TableHead>
-                <TableHead className="py-8 px-10 text-[10px] font-black text-white/30 uppercase tracking-[0.25em]">Status</TableHead>
-                <TableHead className="py-8 px-10 text-[10px] font-black text-white/30 uppercase tracking-[0.25em]">Table</TableHead>
-                <TableHead className="py-8 px-10 text-[10px] font-black text-white/30 uppercase tracking-[0.25em]">Total</TableHead>
-                <TableHead className="py-8 px-10 text-[10px] font-black text-white/30 uppercase tracking-[0.25em] text-right">Actions</TableHead>
+              <TableRow className="border-b border-gray-100 hover:bg-transparent">
+                <TableHead className="py-4 px-6 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Order Details</TableHead>
+                <TableHead className="py-4 px-6 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Status</TableHead>
+                <TableHead className="py-4 px-6 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Table</TableHead>
+                <TableHead className="py-4 px-6 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Total</TableHead>
+                <TableHead className="py-4 px-6 text-[10px] font-bold text-gray-400 uppercase tracking-wider text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredOrders.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="py-32 text-center">
-                    <div className="flex flex-col items-center gap-6">
-                      <div className="w-20 h-20 bg-white/[0.02] rounded-full flex items-center justify-center text-white/10">
-                        <ShoppingBag className="w-10 h-10" />
+                  <TableCell colSpan={5} className="py-20 text-center">
+                    <div className="flex flex-col items-center gap-4">
+                      <div className="w-14 h-14 bg-gray-50 rounded-full flex items-center justify-center text-gray-300">
+                        <ShoppingBag className="w-7 h-7" />
                       </div>
-                      <div className="text-white/20 font-black uppercase tracking-widest text-xs italic">No orders found matching your criteria</div>
+                      <div className="text-gray-400 font-medium text-sm">No orders found matching your criteria</div>
                     </div>
                   </TableCell>
                 </TableRow>
               ) : (
                 filteredOrders.map((order) => (
-                  <TableRow key={order.id} className="group border-b border-white/[0.03] hover:bg-white/[0.03] transition-all duration-500">
-                    <TableCell className="py-10 px-10">
-                      <div className="flex items-center gap-6">
-                        <div className="w-16 h-16 bg-white/[0.03] rounded-2xl flex items-center justify-center text-white/20 group-hover:scale-110 group-hover:text-amber-500 transition-all duration-500">
-                          <ShoppingBag className="w-8 h-8" />
+                  <TableRow key={order.id} className="group border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
+                    <TableCell className="py-4 px-6">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center text-gray-400 group-hover:text-brand-orange transition-colors">
+                          <ShoppingBag className="w-5 h-5" />
                         </div>
                         <div>
-                          <div className="font-black text-white text-xl italic tracking-tighter leading-none mb-2">#{order.id.slice(0, 8).toUpperCase()}</div>
-                          <div className="flex items-center gap-3 text-[10px] font-black text-white/30 uppercase tracking-widest italic">
+                          <div className="font-bold text-gray-900 text-sm">#{order.id.slice(0, 8).toUpperCase()}</div>
+                          <div className="flex items-center gap-1.5 text-[10px] text-gray-400 mt-0.5">
                             <Clock className="w-3 h-3" />
                             {new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </div>
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className="py-10 px-10">
-                      <Badge className={cn("px-4 py-2 rounded-lg font-black uppercase tracking-widest text-[9px] border-none italic", getStatusColor(order.status))}>
+                    <TableCell className="py-4 px-6">
+                      <Badge className={cn("px-3 py-1 rounded-lg font-semibold uppercase tracking-wider text-[9px] border-none", getStatusColor(order.status))}>
                         {order.status}
                       </Badge>
                     </TableCell>
-                    <TableCell className="py-10 px-10">
-                      <div className="font-black text-white text-xl italic tracking-tighter">
-                        {order.table_number ? `TABLE ${order.table_number}` : 'TAKEAWAY'}
+                    <TableCell className="py-4 px-6">
+                      <div className="font-semibold text-gray-700 text-sm">
+                        {order.table_number ? `Table ${order.table_number}` : 'Takeaway'}
                       </div>
                     </TableCell>
-                    <TableCell className="py-10 px-10">
-                      <div className="font-black text-amber-500 text-2xl italic tracking-tighter leading-none">${order.total?.toFixed(2)}</div>
-                      <div className="mt-2 flex items-center gap-2">
-                        {order.payment_method === 'card' ? <CreditCard className="w-3 h-3 text-white/30" /> : <Wallet className="w-3 h-3 text-white/30" />}
-                        <span className="text-[9px] font-black text-white/30 uppercase tracking-widest italic">{order.payment_status}</span>
+                    <TableCell className="py-4 px-6">
+                      <div className="font-bold text-brand-orange text-sm">${order.total?.toFixed(2)}</div>
+                      <div className="mt-1 flex items-center gap-1.5">
+                        {order.payment_method === 'card' ? <CreditCard className="w-3 h-3 text-gray-400" /> : <Wallet className="w-3 h-3 text-gray-400" />}
+                        <span className="text-[9px] text-gray-400 uppercase tracking-wider">{order.payment_status}</span>
                       </div>
                     </TableCell>
-                    <TableCell className="py-10 px-10 text-right">
-                      <div className="flex items-center justify-end gap-3">
-                        <Button 
+                    <TableCell className="py-4 px-6 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Button
                           onClick={() => {
                             setSelectedOrder(order)
                             setIsDetailSheetOpen(true)
                           }}
-                          variant="outline" 
-                          className="h-14 w-14 rounded-2xl border-white/[0.08] bg-white/[0.03] hover:bg-white/10 transition-all group/btn"
+                          variant="outline"
+                          className="h-9 w-9 rounded-xl border-gray-200 bg-white hover:bg-gray-50 p-0"
                         >
-                          <Eye className="w-6 h-6 text-white group-hover/btn:scale-110 transition-transform" />
+                          <Eye className="w-4 h-4 text-gray-500" />
                         </Button>
-                        <Button 
+                        <Button
                           onClick={() => printReceipt(order)}
-                          variant="outline" 
-                          className="h-14 w-14 rounded-2xl border-white/[0.08] bg-white/[0.03] hover:bg-white/10 transition-all group/btn"
+                          variant="outline"
+                          className="h-9 w-9 rounded-xl border-gray-200 bg-white hover:bg-gray-50 p-0"
                         >
-                          <Printer className="w-6 h-6 text-white group-hover/btn:scale-110 transition-transform" />
+                          <Printer className="w-4 h-4 text-gray-500" />
                         </Button>
                       </div>
                     </TableCell>
@@ -435,38 +404,38 @@ export default function DashboardOrdersPage() {
 
       {/* Order Details Sheet */}
       <Sheet open={isDetailSheetOpen} onOpenChange={setIsDetailSheetOpen}>
-        <SheetContent className="bg-[#020202] border-l border-white/10 text-white w-full sm:max-w-2xl p-0 overflow-y-auto">
+        <SheetContent className="bg-white border-l border-gray-100 w-full sm:max-w-2xl p-0 overflow-y-auto">
           {selectedOrder && (
             <div className="flex flex-col h-full">
-              <div className="p-12 space-y-12">
-                <SheetHeader className="space-y-6">
+              <div className="p-8 space-y-8">
+                <SheetHeader className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <Badge className={cn("px-6 py-2.5 rounded-xl font-black uppercase tracking-widest text-[10px] border-none italic", getStatusColor(selectedOrder.status))}>
+                    <Badge className={cn("px-4 py-1.5 rounded-lg font-semibold uppercase tracking-wider text-[10px] border-none", getStatusColor(selectedOrder.status))}>
                       {selectedOrder.status}
                     </Badge>
-                    <div className="text-[10px] font-black text-white/30 uppercase tracking-[0.25em] italic">
+                    <div className="text-[10px] text-gray-400 uppercase tracking-wider">
                       {new Date(selectedOrder.created_at).toLocaleString()}
                     </div>
                   </div>
-                  <SheetTitle className="text-6xl font-black tracking-tighter text-white uppercase italic leading-none">
-                    Order <span className="text-amber-500">#{selectedOrder.id.slice(0, 8).toUpperCase()}</span>
+                  <SheetTitle className="text-2xl font-black tracking-tight text-gray-900">
+                    Order <span className="text-brand-orange">#{selectedOrder.id.slice(0, 8).toUpperCase()}</span>
                   </SheetTitle>
-                  <SheetDescription className="text-white/40 font-bold uppercase tracking-[0.2em] text-[10px] italic">
+                  <SheetDescription className="text-gray-500 text-sm">
                     Review and process order details for {selectedOrder.table_number ? `Table ${selectedOrder.table_number}` : 'Takeaway'}.
                   </SheetDescription>
                 </SheetHeader>
 
                 {/* Status Actions */}
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between border-b border-white/10 pb-6">
-                    <h3 className="text-2xl font-black italic tracking-tighter uppercase">Process Workflow</h3>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+                    <h3 className="text-base font-bold text-gray-900">Process Workflow</h3>
                     <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-                      <span className="text-[10px] font-black text-white/40 uppercase tracking-widest italic">Live Processing</span>
+                      <div className="w-2 h-2 rounded-full bg-brand-orange animate-pulse" />
+                      <span className="text-[10px] text-gray-400 uppercase tracking-wider">Live</span>
                     </div>
                   </div>
-                  
-                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     {[
                       { status: 'pending', icon: Clock, label: 'HOLD' },
                       { status: 'preparing', icon: UtensilsCrossed, label: 'KITCHEN' },
@@ -487,29 +456,29 @@ export default function DashboardOrdersPage() {
                           disabled={isActive}
                           onClick={() => updateOrderStatus(selectedOrder.id, stage.status)}
                           className={cn(
-                            "relative h-32 rounded-3xl flex flex-col items-center justify-center gap-3 border transition-all duration-500 group overflow-hidden",
-                            isActive 
-                              ? "bg-amber-500 border-amber-400 text-black shadow-[0_15px_40px_rgba(245,158,11,0.2)] scale-105 z-10" 
+                            "relative h-24 rounded-2xl flex flex-col items-center justify-center gap-2 border transition-all duration-300",
+                            isActive
+                              ? "bg-brand-orange border-brand-orange text-white shadow-[0_4px_12px_rgba(245,124,0,0.25)]"
                               : isNext
-                                ? "bg-white/[0.05] border-amber-500/30 text-white hover:bg-white/[0.1] hover:border-amber-500/50"
-                                : "bg-white/[0.02] border-white/[0.05] text-white/20 hover:bg-white/[0.05] hover:text-white/40"
+                                ? "bg-white border-brand-orange/30 text-gray-700 hover:border-brand-orange/50 hover:bg-orange-50/30"
+                                : "bg-gray-50 border-gray-100 text-gray-300 hover:bg-gray-100"
                           )}
                         >
                           <Icon className={cn(
-                            "w-8 h-8 transition-transform duration-500 group-hover:scale-110",
-                            isActive ? "text-black" : isNext ? "text-amber-500" : "text-white/10"
+                            "w-5 h-5",
+                            isActive ? "text-white" : isNext ? "text-brand-orange" : "text-gray-300"
                           )} />
-                          <div className="font-black uppercase tracking-[0.2em] text-[10px] italic">{stage.label}</div>
-                          
+                          <div className="font-bold uppercase tracking-wider text-[9px]">{stage.label}</div>
+
                           {isNext && (
-                            <div className="absolute top-3 right-3">
-                              <Play className="w-3 h-3 text-amber-500 fill-amber-500 animate-pulse" />
+                            <div className="absolute top-2 right-2">
+                              <Play className="w-2.5 h-2.5 text-brand-orange fill-brand-orange animate-pulse" />
                             </div>
                           )}
 
                           {isActive && (
-                            <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-black flex items-center justify-center rounded-tl-xl">
-                              <CheckCircle2 className="w-3 h-3 text-amber-500" />
+                            <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-white flex items-center justify-center rounded-tl-xl border border-orange-100">
+                              <CheckCircle2 className="w-3 h-3 text-brand-orange" />
                             </div>
                           )}
                         </button>
@@ -519,53 +488,51 @@ export default function DashboardOrdersPage() {
 
                   {/* Quick Action Bar */}
                   {(selectedOrder.status !== 'completed' && selectedOrder.status !== 'cancelled') && (
-                    <div className="p-1.5 bg-white/[0.03] border border-white/5 rounded-[32px] mt-4">
-                      <Button 
-                        onClick={() => {
-                          const flow = ['pending', 'preparing', 'ready', 'completed']
-                          const nextIdx = flow.indexOf(selectedOrder.status) + 1
-                          if (nextIdx < flow.length) {
-                            updateOrderStatus(selectedOrder.id, flow[nextIdx])
-                          }
-                        }}
-                        className="w-full h-20 rounded-[28px] bg-white text-black hover:bg-amber-500 hover:text-black font-black text-xl flex items-center justify-center gap-4 transition-all hover:scale-[1.01] active:scale-[0.98] border-none uppercase italic tracking-tighter"
-                      >
-                        Advance to {
-                          selectedOrder.status === 'pending' ? 'Kitchen' :
-                          selectedOrder.status === 'preparing' ? 'Dispatch' :
-                          'Settlement'
+                    <Button
+                      onClick={() => {
+                        const flow = ['pending', 'preparing', 'ready', 'completed']
+                        const nextIdx = flow.indexOf(selectedOrder.status) + 1
+                        if (nextIdx < flow.length) {
+                          updateOrderStatus(selectedOrder.id, flow[nextIdx])
                         }
-                        <ChevronRight className="w-6 h-6 stroke-[3]" />
-                      </Button>
-                    </div>
+                      }}
+                      className="w-full h-12 rounded-xl bg-brand-orange hover:bg-brand-orange/90 text-white font-bold flex items-center justify-center gap-2 border-none shadow-[0_4px_12px_rgba(245,124,0,0.2)]"
+                    >
+                      Advance to {
+                        selectedOrder.status === 'pending' ? 'Kitchen' :
+                        selectedOrder.status === 'preparing' ? 'Dispatch' :
+                        'Settlement'
+                      }
+                      <ChevronRight className="w-4 h-4" />
+                    </Button>
                   )}
                 </div>
 
                 {/* Order Items */}
-                <div className="space-y-8">
-                  <div className="flex items-center justify-between border-b border-white/10 pb-6">
-                    <h3 className="text-2xl font-black italic tracking-tighter uppercase">Order Items</h3>
-                    <Badge className="bg-white/5 text-white/40 font-black border-none uppercase tracking-widest text-[10px] py-1.5 px-3">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+                    <h3 className="text-base font-bold text-gray-900">Order Items</h3>
+                    <Badge className="bg-gray-100 text-gray-500 font-semibold border-none uppercase tracking-wider text-[10px]">
                       {selectedOrder.order_items?.length || 0} ITEMS
                     </Badge>
                   </div>
-                  <div className="space-y-6">
+                  <div className="space-y-3">
                     {selectedOrder.order_items?.map((item, idx) => (
-                      <div key={idx} className="flex items-center justify-between group">
-                        <div className="flex items-center gap-6">
-                          <div className="w-16 h-16 bg-white/[0.03] rounded-2xl flex items-center justify-center font-black text-amber-500 text-2xl italic border border-white/[0.05] group-hover:scale-110 transition-all duration-500">
+                      <div key={idx} className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 bg-brand-orange/10 rounded-xl flex items-center justify-center font-black text-brand-orange text-sm border border-brand-orange/10">
                             {item.quantity}
                           </div>
                           <div>
-                            <div className="font-black text-white text-xl italic tracking-tighter leading-none group-hover:text-amber-500 transition-colors">
+                            <div className="font-semibold text-gray-900 text-sm">
                               {item.menu_items?.name}
                             </div>
-                            <div className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] mt-2 italic">
-                              {item.menu_items?.category} • ${item.price.toFixed(2)} EACH
+                            <div className="text-[10px] text-gray-400 uppercase tracking-wider mt-0.5">
+                              {item.menu_items?.category} · ${item.price.toFixed(2)} each
                             </div>
                           </div>
                         </div>
-                        <div className="text-2xl font-black text-white italic tracking-tighter">
+                        <div className="font-bold text-gray-900 text-sm">
                           ${(item.quantity * item.price).toFixed(2)}
                         </div>
                       </div>
@@ -574,35 +541,36 @@ export default function DashboardOrdersPage() {
                 </div>
 
                 {/* Summary */}
-                <div className="bg-white/[0.02] border border-white/[0.05] rounded-[40px] p-10 space-y-6 mt-12">
-                  <div className="flex justify-between items-center text-white/40 font-black uppercase tracking-widest text-[10px] italic">
+                <div className="bg-gray-50 border border-gray-100 rounded-2xl p-6 space-y-3">
+                  <div className="flex justify-between items-center text-gray-500 text-xs">
                     <span>Subtotal</span>
                     <span>${selectedOrder.total.toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between items-center text-white/40 font-black uppercase tracking-widest text-[10px] italic">
+                  <div className="flex justify-between items-center text-gray-500 text-xs">
                     <span>Tax (0%)</span>
                     <span>$0.00</span>
                   </div>
-                  <div className="h-[1px] bg-white/10" />
+                  <div className="h-px bg-gray-200" />
                   <div className="flex justify-between items-center">
-                    <span className="text-2xl font-black italic tracking-tighter uppercase">Total Amount</span>
-                    <span className="text-5xl font-black italic tracking-tighter text-amber-500">${selectedOrder.total.toFixed(2)}</span>
+                    <span className="text-base font-bold text-gray-900">Total Amount</span>
+                    <span className="text-2xl font-black text-brand-orange">${selectedOrder.total.toFixed(2)}</span>
                   </div>
                 </div>
 
-                <div className="flex gap-4 pt-8">
-                  <Button 
+                <div className="flex gap-3 pt-2">
+                  <Button
                     onClick={() => printReceipt(selectedOrder)}
-                    className="flex-1 h-20 rounded-[24px] bg-amber-500 hover:bg-amber-400 text-black font-black text-xl flex items-center justify-center gap-4 transition-all hover:scale-[1.02] active:scale-[0.98] border-none uppercase italic tracking-tighter shadow-[0_20px_50px_rgba(245,158,11,0.3)]"
+                    className="flex-1 h-12 rounded-xl bg-brand-orange hover:bg-brand-orange/90 text-white font-bold flex items-center justify-center gap-2 border-none shadow-[0_4px_12px_rgba(245,124,0,0.2)]"
                   >
-                    <Printer className="w-7 h-7 stroke-[3]" />
+                    <Printer className="w-4 h-4" />
                     Print Receipt
                   </Button>
-                  <Button 
+                  <Button
                     onClick={() => updateOrderStatus(selectedOrder.id, 'cancelled')}
-                    className="h-20 px-8 rounded-[24px] bg-rose-500/10 hover:bg-rose-500 text-rose-500 hover:text-white font-black text-xl flex items-center justify-center transition-all hover:scale-[1.02] active:scale-[0.98] border border-rose-500/20"
+                    variant="outline"
+                    className="h-12 px-4 rounded-xl border-rose-200 text-rose-500 hover:bg-rose-50 hover:text-rose-600"
                   >
-                    <XCircle className="w-7 h-7" />
+                    <XCircle className="w-4 h-4" />
                   </Button>
                 </div>
               </div>
