@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { DashboardLayout } from '@/components/dashboards/DashboardLayout'
+import { placeOrderAction, checkoutOrderAction } from '@/app/auth/actions'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
@@ -50,7 +50,6 @@ interface CartItem extends MenuItem {
 }
 
 export default function POSPage() {
-  const [profile, setProfile] = useState<any>(null)
   const [categories, setCategories] = useState<Category[]>([])
   const [items, setItems] = useState<MenuItem[]>([])
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
@@ -69,34 +68,9 @@ export default function POSPage() {
   const supabase = createClient()
 
   useEffect(() => {
-    fetchProfile()
     fetchInitialData()
     fetchTables()
   }, [])
-
-  const fetchProfile = async () => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-
-    const { data: profileData } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', user.id)
-      .single()
-
-    const { data: membershipData } = await supabase
-      .from('org_memberships')
-      .select('*, organization:organizations(name)')
-      .eq('user_id', user.id)
-      .limit(1)
-      .single()
-
-    setProfile({
-      ...profileData,
-      role: membershipData?.role || 'user',
-      organization: (membershipData as any)?.organization
-    })
-  }
 
   useEffect(() => {
     if (selectedTable) {
@@ -218,49 +192,11 @@ export default function POSPage() {
       setIsTableSheetOpen(true)
       return
     }
-    
+
     try {
       setIsProcessing(true)
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Not authenticated')
-
-      let orderId = activeOrder?.id
-      
-      if (!orderId) {
-        // Create new order
-        const { data: order, error: orderError } = await supabase
-          .from('orders')
-          .insert({
-            status: 'pending',
-            total: total,
-            table_id: selectedTable,
-            type: 'dine_in'
-          })
-          .select()
-          .single()
-
-        if (orderError) throw orderError
-        orderId = order.id
-      } else {
-        // Update existing order total
-        const { error: updateError } = await supabase
-          .from('orders')
-          .update({ total: total })
-          .eq('id', orderId)
-        
-        if (updateError) throw updateError
-      }
-
-      const orderItems = cart.map(item => ({
-        order_id: orderId,
-        menu_item_id: item.id,
-        quantity: item.quantity,
-        price: item.price
-      }))
-
-      const { error: itemsError } = await supabase.from('order_items').insert(orderItems)
-      if (itemsError) throw itemsError
-
+      const cartItems = cart.map(i => ({ id: i.id, quantity: i.quantity, price: i.price }))
+      await placeOrderAction(selectedTable, cartItems, total, activeOrder?.id)
       setCart([])
       fetchActiveOrder(selectedTable)
       alert('Order sent to kitchen!')
@@ -278,67 +214,11 @@ export default function POSPage() {
       setIsTableSheetOpen(true)
       return
     }
-    
+
     try {
       setIsProcessing(true)
-      
-      let orderId = activeOrder?.id
-      
-      // 1. Create the order if it doesn't exist yet (cart is not empty, no active order)
-      if (cart.length > 0 && !orderId) {
-        const { data: order, error: orderError } = await supabase
-          .from('orders')
-          .insert({
-            status: 'completed',
-            total: total,
-            table_id: selectedTable,
-            payment_status: 'paid',
-            payment_method: paymentMethod,
-            type: 'dine_in'
-          })
-          .select()
-          .single()
-
-        if (orderError) throw orderError
-        orderId = order.id
-
-        const orderItems = cart.map(item => ({
-          order_id: orderId,
-          menu_item_id: item.id,
-          quantity: item.quantity,
-          price: item.price
-        }))
-
-        const { error: itemsError } = await supabase.from('order_items').insert(orderItems)
-        if (itemsError) throw itemsError
-      } else if (orderId) {
-        // 2. If there is an active order, complete it
-        // First add any items in the cart to it
-        if (cart.length > 0) {
-          const orderItems = cart.map(item => ({
-            order_id: orderId,
-            menu_item_id: item.id,
-            quantity: item.quantity,
-            price: item.price
-          }))
-          const { error: itemsError } = await supabase.from('order_items').insert(orderItems)
-          if (itemsError) throw itemsError
-        }
-
-        // Then update the order status
-        const { error: updateError } = await supabase
-          .from('orders')
-          .update({ 
-            status: 'completed',
-            total: total,
-            payment_status: 'paid',
-            payment_method: paymentMethod
-          })
-          .eq('id', orderId)
-
-        if (updateError) throw updateError
-      }
-      
+      const cartItems = cart.map(i => ({ id: i.id, quantity: i.quantity, price: i.price }))
+      await checkoutOrderAction(selectedTable, cartItems, total, paymentMethod, activeOrder?.id)
       setCart([])
       setActiveOrder(null)
       setActiveOrderItems([])
@@ -353,16 +233,8 @@ export default function POSPage() {
     }
   }
 
-  if (!profile) return null
-
   return (
-    <DashboardLayout 
-      role={profile.role} 
-      userName={profile.full_name || 'User'} 
-      restaurantName={profile.organization?.name}
-      fullScreen={true}
-    >
-      <div className="flex h-screen bg-background overflow-hidden">
+    <div className="flex h-screen bg-background overflow-hidden">
       {/* Sidebar Cart */}
       <aside className="w-[400px] bg-card border-r border-border/50 flex flex-col shadow-2xl z-20">
         <div className="p-8 border-b border-border/50 bg-card sticky top-0">
@@ -737,7 +609,6 @@ export default function POSPage() {
           </SheetFooter>
         </SheetContent>
       </Sheet>
-      </div>
-    </DashboardLayout>
+    </div>
   )
 }

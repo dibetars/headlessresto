@@ -78,6 +78,8 @@ module.exports = {
           light: '#FF9800',
           dark: '#E65100',
         },
+        'brand-cream': '#EDE9E0',
+        'brand-sand': '#F5F1EA',
         'brand-black': '#020202',
         'brand-dark': '#0A0A0A',
         'brand-muted': '#171717',
