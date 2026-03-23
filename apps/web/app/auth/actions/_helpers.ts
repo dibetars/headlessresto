@@ -1,8 +1,7 @@
 'use server'
 
 import { createClient, createAdminClient } from '@/lib/supabase/server'
-
-export const ADMIN_ROLES = ['owner', 'admin', 'manager', 'restaurant_admin', 'super_admin']
+import { ADMIN_ROLES } from './constants'
 
 export async function requireAuth() {
   const supabase = createClient()
