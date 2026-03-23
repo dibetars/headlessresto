@@ -12,9 +12,9 @@ const store = new Map<string, Entry>()
 // Clean up expired entries every 5 minutes to prevent unbounded memory growth
 const cleanup = setInterval(() => {
   const now = Date.now()
-  for (const [key, entry] of store) {
+  store.forEach((entry, key) => {
     if (entry.resetAt < now) store.delete(key)
-  }
+  })
 }, 5 * 60 * 1000)
 
 // Allow Node.js to exit without waiting for this timer

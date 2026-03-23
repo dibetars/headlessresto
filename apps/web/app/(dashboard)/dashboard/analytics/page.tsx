@@ -48,10 +48,10 @@ export default function AnalyticsPage() {
   const maxRevenue = Math.max(...weeklyData.map(d => d.revenue), 1)
 
   // Status breakdown
-  const statusGroups = orders.reduce((acc, o) => {
+  const statusGroups: Record<string, number> = orders.reduce((acc: Record<string, number>, o) => {
     acc[o.status] = (acc[o.status] || 0) + 1
     return acc
-  }, {} as Record<string, number>)
+  }, {})
 
   const statusColors: Record<string, string> = {
     completed: 'bg-emerald-500',
@@ -122,7 +122,7 @@ export default function AnalyticsPage() {
           ) : (
             <div className="space-y-4">
               {Object.entries(statusGroups).map(([status, count]) => {
-                const pct = Math.round(((count as number) / orders.length) * 100)
+                const pct = Math.round((count / orders.length) * 100)
                 return (
                   <div key={status} className="space-y-1.5">
                     <div className="flex justify-between items-center">
