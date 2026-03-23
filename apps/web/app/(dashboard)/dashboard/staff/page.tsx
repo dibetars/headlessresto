@@ -52,6 +52,7 @@ export default function StaffPage() {
   const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [editRole, setEditRole] = useState('')
+  const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
 
   useEffect(() => {
     fetchStaff()
@@ -78,7 +79,8 @@ export default function StaffPage() {
       setSelectedStaff(null)
       fetchStaff()
     } catch (error: any) {
-      alert('Error updating staff: ' + error.message)
+      setNotification({ message: 'Error updating staff: ' + error.message, type: 'error' })
+      setTimeout(() => setNotification(null), 3000)
     } finally {
       setIsSubmitting(false)
     }
@@ -91,7 +93,8 @@ export default function StaffPage() {
       await removeStaffMemberAction(id)
       setStaff(prev => prev.filter(s => s.id !== id))
     } catch (error: any) {
-      alert('Error removing staff: ' + error.message)
+      setNotification({ message: 'Error removing staff: ' + error.message, type: 'error' })
+      setTimeout(() => setNotification(null), 3000)
     } finally {
       setIsSubmitting(false)
     }
@@ -107,6 +110,15 @@ export default function StaffPage() {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-3 duration-700">
+      {notification && (
+        <div className={`fixed top-6 right-6 z-50 px-5 py-3 rounded-2xl text-sm font-semibold shadow-lg transition-all ${
+          notification.type === 'success'
+            ? 'bg-emerald-500 text-white'
+            : 'bg-red-500 text-white'
+        }`}>
+          {notification.message}
+        </div>
+      )}
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -114,7 +126,10 @@ export default function StaffPage() {
           <p className="text-gray-500 mt-1 text-sm">Manage restaurant personnel, roles, and access permissions.</p>
         </div>
         <Button
-          onClick={() => alert('To add a team member, have them sign up and join your organization.')}
+          onClick={() => {
+            setNotification({ message: 'To add a team member, have them sign up and join your organization.', type: 'success' })
+            setTimeout(() => setNotification(null), 3000)
+          }}
           className="h-11 px-6 rounded-2xl bg-brand-orange hover:bg-brand-orange/90 text-white font-bold flex items-center gap-2 shadow-[0_4px_12px_rgba(245,124,0,0.25)] border-none"
         >
           <UserPlus className="w-4 h-4" />

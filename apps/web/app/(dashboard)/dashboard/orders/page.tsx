@@ -105,11 +105,11 @@ export default function DashboardOrdersPage() {
   const [isDispatching, setIsDispatching] = useState(false)
   const [isCancellingDelivery, setIsCancellingDelivery] = useState(false)
   const [deliveryError, setDeliveryError] = useState<string | null>(null)
-  const pollRef = useRef<NodeJS.Timeout | null>(null)
 
-  const supabase = createClient()
+  const supabaseRef = useRef(createClient())
 
   useEffect(() => {
+    const supabase = supabaseRef.current
     fetchOrders()
 
     // Real-time subscription
@@ -139,24 +139,35 @@ export default function DashboardOrdersPage() {
     }
   }
 
-  // Poll delivery status every 30 seconds when there's an active delivery
+  // Realtime subscription for delivery status updates
   useEffect(() => {
-    if (!deliveryInfo || ['delivered', 'cancelled', 'returned'].includes(deliveryInfo.status)) {
-      if (pollRef.current) clearInterval(pollRef.current)
-      return
-    }
-    const poll = async () => {
-      const res = await getDeliveryStatusAction(deliveryInfo.deliveryId)
-      if (res.success) {
-        setDeliveryInfo(prev => prev
-          ? { ...prev, status: res.status!, trackingUrl: res.trackingUrl, driver: res.driver }
-          : prev
-        )
-      }
-    }
-    pollRef.current = setInterval(poll, 30_000)
-    return () => { if (pollRef.current) clearInterval(pollRef.current) }
-  }, [deliveryInfo?.deliveryId, deliveryInfo?.status])
+    if (!deliveryInfo?.deliveryId) return
+
+    const supabase = supabaseRef.current
+    const channel = supabase
+      .channel(`delivery:${deliveryInfo.deliveryId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'delivery_orders',
+          filter: `delivery_id=eq.${deliveryInfo.deliveryId}`,
+        },
+        (payload) => {
+          const updated = payload.new as any
+          setDeliveryInfo(prev => prev ? {
+            ...prev,
+            status: updated.status,
+            trackingUrl: updated.tracking_url,
+            driver: updated.driver,
+          } : null)
+        }
+      )
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [deliveryInfo?.deliveryId])
 
   // Reset delivery state when sheet closes or a different order is selected
   const openOrderDetail = (order: Order) => {

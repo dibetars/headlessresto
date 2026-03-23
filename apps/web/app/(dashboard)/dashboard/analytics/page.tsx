@@ -29,9 +29,43 @@ export default function AnalyticsPage() {
     })
   }, [])
 
+  // Period-over-period calculations
+  const now = new Date()
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+  const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000)
+
+  const currentPeriod = orders.filter(o => new Date(o.created_at) >= thirtyDaysAgo)
+  const previousPeriod = orders.filter(o => {
+    const d = new Date(o.created_at)
+    return d >= sixtyDaysAgo && d < thirtyDaysAgo
+  })
+
+  function calcChange(current: number, previous: number): { change: number; trend: 'up' | 'down' } {
+    if (previous === 0) return { change: 0, trend: 'up' }
+    const change = Math.round(((current - previous) / previous) * 100)
+    return { change: Math.abs(change), trend: change >= 0 ? 'up' : 'down' }
+  }
+
   const totalRevenue = orders.reduce((s, o) => s + (o.total || 0), 0)
   const completedOrders = orders.filter(o => o.status === 'completed').length
   const avgTicket = orders.length > 0 ? totalRevenue / orders.length : 0
+
+  const currentRevenue = currentPeriod.reduce((s, o) => s + (o.total || 0), 0)
+  const previousRevenue = previousPeriod.reduce((s, o) => s + (o.total || 0), 0)
+  const revenueChange = calcChange(currentRevenue, previousRevenue)
+
+  const ordersChange = calcChange(currentPeriod.length, previousPeriod.length)
+
+  const currentCompleted = currentPeriod.filter(o => o.status === 'completed').length
+  const previousCompleted = previousPeriod.filter(o => o.status === 'completed').length
+  const completedChange = calcChange(currentCompleted, previousCompleted)
+
+  const currentAvgTicket = currentPeriod.length > 0 ? currentRevenue / currentPeriod.length : 0
+  const previousAvgTicket = previousPeriod.length > 0 ? previousRevenue / previousPeriod.length : 0
+  const avgTicketChange = calcChange(
+    Math.round(currentAvgTicket * 100),
+    Math.round(previousAvgTicket * 100)
+  )
 
   // Weekly breakdown
   const last7Days = Array.from({ length: 7 }, (_, i) => {
@@ -41,7 +75,7 @@ export default function AnalyticsPage() {
   })
 
   const weeklyData = last7Days.map(({ date, label }) => {
-    const dayOrders = orders.filter(o => o.created_at?.startsWith(date))
+    const dayOrders = currentPeriod.filter(o => o.created_at?.startsWith(date))
     const revenue = dayOrders.reduce((s, o) => s + (o.total || 0), 0)
     return { label, revenue, count: dayOrders.length }
   })
@@ -76,10 +110,10 @@ export default function AnalyticsPage() {
 
       {/* KPI grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <MetricCard label="Total Revenue" value={`$${totalRevenue.toLocaleString()}`} change={12.5} trend="up" />
-        <MetricCard label="Total Orders" value={orders.length.toString()} change={8.2} trend="up" />
-        <MetricCard label="Completed" value={completedOrders.toString()} change={4.1} trend="up" />
-        <MetricCard label="Avg. Ticket" value={`$${avgTicket.toFixed(2)}`} change={-1.2} trend="down" />
+        <MetricCard label="Total Revenue" value={`$${totalRevenue.toLocaleString()}`} change={revenueChange.change} trend={revenueChange.trend} />
+        <MetricCard label="Total Orders" value={orders.length.toString()} change={ordersChange.change} trend={ordersChange.trend} />
+        <MetricCard label="Completed" value={completedOrders.toString()} change={completedChange.change} trend={completedChange.trend} />
+        <MetricCard label="Avg. Ticket" value={`$${avgTicket.toFixed(2)}`} change={avgTicketChange.change} trend={avgTicketChange.trend} />
       </div>
 
       {/* Charts row */}
