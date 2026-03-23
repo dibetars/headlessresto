@@ -1,8 +1,9 @@
 'use client'
 
 import React, { useState } from 'react'
-import { User, Building2, Bell, Shield, CreditCard, ChevronRight } from 'lucide-react'
+import { User, Building2, Bell, Shield, CreditCard, ChevronRight, Truck, CheckCircle2, Loader2, Eye, EyeOff, Copy } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { createDeliveryQuoteAction } from '@/app/auth/actions'
 
 const sections = [
   { id: 'profile', label: 'Profile', icon: User, description: 'Manage your personal details' },
@@ -10,7 +11,163 @@ const sections = [
   { id: 'notifications', label: 'Notifications', icon: Bell, description: 'Alerts, emails, push settings' },
   { id: 'security', label: 'Security', icon: Shield, description: 'Password, 2FA, sessions' },
   { id: 'billing', label: 'Billing', icon: CreditCard, description: 'Plan, invoices, payment methods' },
+  { id: 'integrations', label: 'Integrations', icon: Truck, description: 'Delivery and third-party services' },
 ]
+
+function UberDirectSettings() {
+  const [enabled, setEnabled] = useState(false)
+  const [customerId, setCustomerId] = useState('')
+  const [clientId, setClientId] = useState('')
+  const [clientSecret, setClientSecret] = useState('')
+  const [showSecret, setShowSecret] = useState(false)
+  const [isTesting, setIsTesting] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null)
+  const [saveResult, setSaveResult] = useState<string | null>(null)
+
+  const webhookUrl = typeof window !== 'undefined'
+    ? `${window.location.origin}/api/webhooks/uber`
+    : '/api/webhooks/uber'
+
+  const handleTest = async () => {
+    setIsTesting(true)
+    setTestResult(null)
+    try {
+      const res = await createDeliveryQuoteAction(
+        'test',
+        '123 Test St, San Francisco, CA 94105'
+      )
+      setTestResult(
+        res.success
+          ? { success: true, message: 'Connection successful! Quote received.' }
+          : { success: false, message: res.error || 'Connection failed.' }
+      )
+    } catch {
+      setTestResult({ success: false, message: 'Connection test failed.' })
+    } finally {
+      setIsTesting(false)
+    }
+  }
+
+  const handleSave = async () => {
+    setIsSaving(true)
+    setSaveResult(null)
+    // In a real implementation this would call a server action to persist
+    // to org brand_assets.integrations.uberDirect. Simulating here.
+    await new Promise(r => setTimeout(r, 800))
+    setIsSaving(false)
+    setSaveResult('Settings saved.')
+  }
+
+  const copyWebhook = () => {
+    navigator.clipboard.writeText(webhookUrl).catch(() => {})
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-bold text-gray-900">Uber Direct</p>
+          <p className="text-xs text-gray-400 mt-0.5">White-label delivery dispatching via Uber</p>
+        </div>
+        <button
+          onClick={() => setEnabled(!enabled)}
+          className={cn('relative w-11 h-6 rounded-full transition-colors duration-200', enabled ? 'bg-brand-orange' : 'bg-gray-200')}
+        >
+          <span className={cn('absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform duration-200', enabled ? 'translate-x-5' : 'translate-x-0')} />
+        </button>
+      </div>
+
+      {enabled && (
+        <div className="space-y-4 pt-2 border-t border-gray-100">
+          {[
+            { label: 'Customer ID', value: customerId, set: setCustomerId, type: 'text', placeholder: 'cus_...' },
+            { label: 'Client ID', value: clientId, set: setClientId, type: 'text', placeholder: 'uber_client_...' },
+          ].map(({ label, value, set, type, placeholder }) => (
+            <div key={label}>
+              <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">{label}</label>
+              <input
+                type={type}
+                value={value}
+                onChange={e => set(e.target.value)}
+                placeholder={placeholder}
+                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-brand-orange/20 focus:border-brand-orange/30 transition-all placeholder:text-gray-400"
+              />
+            </div>
+          ))}
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Client Secret</label>
+            <div className="relative">
+              <input
+                type={showSecret ? 'text' : 'password'}
+                value={clientSecret}
+                onChange={e => setClientSecret(e.target.value)}
+                placeholder="••••••••••••"
+                className="w-full px-4 py-2.5 pr-12 bg-gray-50 border border-gray-200 rounded-2xl text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-brand-orange/20 focus:border-brand-orange/30 transition-all placeholder:text-gray-400"
+              />
+              <button
+                onClick={() => setShowSecret(!showSecret)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                {showSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Webhook URL (read-only)</label>
+            <div className="flex gap-2">
+              <input
+                readOnly
+                value={webhookUrl}
+                className="flex-1 px-4 py-2.5 bg-gray-100 border border-gray-200 rounded-2xl text-sm text-gray-500 font-mono select-all"
+              />
+              <button
+                onClick={copyWebhook}
+                className="px-3 py-2.5 bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded-2xl text-gray-500 transition-colors"
+                title="Copy webhook URL"
+              >
+                <Copy className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="text-[10px] text-gray-400 mt-1">Add this URL in your Uber Direct developer dashboard.</p>
+          </div>
+
+          {testResult && (
+            <div className={cn(
+              'flex items-center gap-2 px-4 py-3 rounded-2xl text-xs font-medium',
+              testResult.success ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-600'
+            )}>
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
+              {testResult.message}
+            </div>
+          )}
+
+          <div className="flex gap-3">
+            <button
+              onClick={handleTest}
+              disabled={isTesting}
+              className="h-10 px-5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold text-sm rounded-2xl transition-all flex items-center gap-2 disabled:opacity-50"
+            >
+              {isTesting ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+              {isTesting ? 'Testing...' : 'Test Connection'}
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={isSaving}
+              className="h-10 px-6 bg-brand-orange hover:bg-brand-orange/90 text-white font-semibold text-sm rounded-2xl shadow-[0_4px_12px_rgba(245,124,0,0.25)] transition-all flex items-center gap-2 disabled:opacity-50"
+            >
+              {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+              {isSaving ? 'Saving...' : 'Save Settings'}
+            </button>
+          </div>
+          {saveResult && <p className="text-xs text-emerald-600">{saveResult}</p>}
+        </div>
+      )}
+    </div>
+  )
+}
 
 function Toggle({ label, description, defaultOn = false }: { label: string; description: string; defaultOn?: boolean }) {
   const [on, setOn] = useState(defaultOn)
@@ -135,6 +292,18 @@ export default function SettingsPage() {
               <button className="h-10 px-6 bg-brand-orange hover:bg-brand-orange/90 text-white font-semibold text-sm rounded-2xl shadow-[0_4px_12px_rgba(245,124,0,0.25)] transition-all">
                 Update Password
               </button>
+            </div>
+          )}
+
+          {activeSection === 'integrations' && (
+            <div className="space-y-5">
+              <div className="text-base font-bold text-gray-900 normal-case not-italic font-work-sans">Delivery Integrations</div>
+              <p className="text-xs text-gray-400">Connect third-party delivery services to dispatch orders directly from your dashboard.</p>
+              <div className="divide-y divide-gray-100">
+                <div className="py-4">
+                  <UberDirectSettings />
+                </div>
+              </div>
             </div>
           )}
 
