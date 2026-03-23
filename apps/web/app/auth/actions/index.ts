@@ -6,26 +6,21 @@ import { headers } from 'next/headers'
 import { rateLimit } from '@/lib/rate-limit'
 
 export async function getUserProfile() {
-  console.log('DEBUG: getUserProfile called');
   const supabase = createClient()
   const { data: { user }, error: authError } = await supabase.auth.getUser()
 
   if (authError) {
-    console.error('DEBUG: auth error:', authError);
-    return null;
-  }
-
-  if (!user) {
-    console.log('DEBUG: no user found');
+    console.error('getUserProfile: auth error:', authError)
     return null
   }
 
-  console.log('DEBUG: user found:', user.id);
+  if (!user) {
+    return null
+  }
 
   // Use admin client to bypass RLS issues (like infinite recursion in policies)
   const adminSupabase = createAdminClient()
-  
-  console.log('DEBUG: fetching profile for user:', user.id);
+
   const { data: profileData, error: profileError } = await adminSupabase
     .from('users')
     .select('*')
@@ -33,50 +28,37 @@ export async function getUserProfile() {
     .maybeSingle()
 
   if (profileError) {
-    console.error('DEBUG: profile error:', profileError);
+    console.error('getUserProfile: profile error:', profileError)
     return null
   }
 
-  // No profile row yet — return a minimal fallback so the user can still reach the dashboard
+  // No profile row found — return null instead of granting a default admin role
   if (!profileData) {
-    console.warn('DEBUG: no users row found for', user.id, '— returning fallback profile');
-    return {
-      id: user.id,
-      full_name: user.email?.split('@')[0] || 'User',
-      email: user.email,
-      role: 'restaurant_admin',
-      organization: null
-    }
+    return null
   }
 
-  console.log('DEBUG: profile found:', profileData);
-
-  console.log('DEBUG: fetching membership for user:', user.id);
   const { data: memberships, error: membershipError } = await adminSupabase
     .from('org_memberships')
     .select('*')
     .eq('user_id', user.id)
 
   if (membershipError) {
-    console.error('DEBUG: membership error:', membershipError);
+    console.error('getUserProfile: membership error:', membershipError)
   }
 
-  console.log('DEBUG: memberships found:', memberships);
-  const membershipData = memberships && memberships.length > 0 ? memberships[0] : null;
+  const membershipData = memberships && memberships.length > 0 ? memberships[0] : null
 
-  let organization = null;
+  let organization = null
   if (membershipData?.org_id) {
-    console.log('DEBUG: fetching organization:', membershipData.org_id);
     const { data: orgData } = await adminSupabase
       .from('organizations')
       .select('name, brand_assets')
       .eq('id', membershipData.org_id)
-      .single();
-    organization = orgData;
+      .single()
+    organization = orgData
   }
 
-  const finalRole = membershipData?.role || 'user';
-  console.log('DEBUG: final profile being returned with role:', finalRole);
+  const finalRole = membershipData?.role || 'user'
 
   return {
     ...profileData,
@@ -87,31 +69,29 @@ export async function getUserProfile() {
 
 export async function signIn(formData: FormData) {
   const ip = headers().get('x-forwarded-for')?.split(',')[0].trim() || 'unknown'
-  const { allowed } = rateLimit(`signIn:${ip}`, 5, 60_000) // 5 attempts per minute
+  const { allowed } = await rateLimit(`signIn:${ip}`, 5, 60_000) // 5 attempts per minute
   if (!allowed) return redirect(`/login?error=${encodeURIComponent('Too many attempts. Please wait a minute.')}`)
 
   const email = formData.get('email') as string
   const password = formData.get('password') as string
   const supabase = createClient()
 
-  console.log('DEBUG: signIn attempt for:', email);
-  const { data, error } = await supabase.auth.signInWithPassword({
+  const { error } = await supabase.auth.signInWithPassword({
     email,
     password,
   })
 
   if (error) {
-    console.error('DEBUG: signIn error:', error.message);
+    console.error('signIn error:', error.message)
     return redirect(`/login?error=${encodeURIComponent(error.message)}`)
   }
 
-  console.log('DEBUG: signIn success for:', data.user?.id);
   return redirect('/dashboard')
 }
 
 export async function signUp(formData: FormData) {
   const ip = headers().get('x-forwarded-for')?.split(',')[0].trim() || 'unknown'
-  const { allowed } = rateLimit(`signUp:${ip}`, 3, 60 * 60_000) // 3 sign-ups per hour
+  const { allowed } = await rateLimit(`signUp:${ip}`, 3, 60 * 60_000) // 3 sign-ups per hour
   if (!allowed) return redirect(`/signup?error=${encodeURIComponent('Too many sign-up attempts. Please try again later.')}`)
 
   const email = formData.get('email') as string
@@ -172,6 +152,8 @@ export async function signUp(formData: FormData) {
 }
 
 export async function getDashboardStats() {
+  const orgId = await getCurrentUserOrgId()
+  if (!orgId) return []
   const adminSupabase = createAdminClient()
 
   const { data: orders } = await adminSupabase
@@ -188,6 +170,7 @@ export async function getDashboardStats() {
         )
       )
     `)
+    .eq('org_id', orgId)
 
   return orders || []
 }
@@ -195,6 +178,7 @@ export async function getDashboardStats() {
 // ─── Super Admin ────────────────────────────────────────────────
 
 export async function getOrganizations() {
+  await assertAdminRole()
   const adminSupabase = createAdminClient()
   const { data } = await adminSupabase
     .from('organizations')
@@ -204,6 +188,7 @@ export async function getOrganizations() {
 }
 
 export async function getPlatformStats() {
+  await assertAdminRole()
   const adminSupabase = createAdminClient()
   const [orgsRes, ordersRes, usersRes] = await Promise.all([
     adminSupabase.from('organizations').select('id', { count: 'exact', head: true }),
@@ -223,6 +208,7 @@ export async function getPlatformStats() {
 }
 
 export async function setOrganizationFeature(orgId: string, feature: string, enabled: boolean) {
+  await assertAdminRole()
   const adminSupabase = createAdminClient()
   const { data: org } = await adminSupabase
     .from('organizations')
@@ -242,6 +228,8 @@ export async function setOrganizationFeature(orgId: string, feature: string, ena
 }
 
 export async function getKDSOrders() {
+  const orgId = await getCurrentUserOrgId()
+  if (!orgId) return []
   const adminSupabase = createAdminClient()
   const { data: orders } = await adminSupabase
     .from('orders')
@@ -259,6 +247,7 @@ export async function getKDSOrders() {
         )
       )
     `)
+    .eq('org_id', orgId)
     .neq('status', 'completed')
     .neq('status', 'cancelled')
     .order('created_at', { ascending: true })
@@ -266,6 +255,8 @@ export async function getKDSOrders() {
 }
 
 export async function getOrders() {
+  const orgId = await getCurrentUserOrgId()
+  if (!orgId) return []
   const adminSupabase = createAdminClient()
   const { data: orders } = await adminSupabase
     .from('orders')
@@ -281,11 +272,13 @@ export async function getOrders() {
         )
       )
     `)
+    .eq('org_id', orgId)
     .order('created_at', { ascending: false })
   return orders || []
 }
 
 export async function updateOrderStatusAction(orderId: string, newStatus: string) {
+  await assertAdminRole()
   const adminSupabase = createAdminClient()
   const { error } = await adminSupabase
     .from('orders')
@@ -297,6 +290,13 @@ export async function updateOrderStatusAction(orderId: string, newStatus: string
 // ─── Shared helpers ─────────────────────────────────────────────────────────
 
 const ADMIN_ROLES = ['owner', 'admin', 'manager', 'restaurant_admin', 'super_admin']
+
+async function requireAuth() {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Unauthorized')
+  return user
+}
 
 async function assertAdminRole() {
   const supabase = createClient()
@@ -330,14 +330,18 @@ async function getCurrentUserOrgId(): Promise<string | null> {
 
 export async function getTables() {
   const orgId = await getCurrentUserOrgId()
+  if (!orgId) return []
   const adminSupabase = createAdminClient()
-  const query = adminSupabase.from('tables').select('*').order('table_number')
-  if (orgId) query.eq('org_id', orgId)
-  const { data } = await query
+  const { data } = await adminSupabase
+    .from('tables')
+    .select('*')
+    .eq('org_id', orgId)
+    .order('table_number')
   return data || []
 }
 
 export async function addTableAction(tableNumber: string, capacity: number) {
+  await assertAdminRole()
   const orgId = await getCurrentUserOrgId()
   const adminSupabase = createAdminClient()
   const { error } = await adminSupabase.from('tables').insert({
@@ -350,12 +354,14 @@ export async function addTableAction(tableNumber: string, capacity: number) {
 }
 
 export async function updateTableAction(id: string, data: { table_number?: string; capacity?: number; status?: string }) {
+  await assertAdminRole()
   const adminSupabase = createAdminClient()
   const { error } = await adminSupabase.from('tables').update(data).eq('id', id)
   if (error) throw error
 }
 
 export async function deleteTableAction(id: string) {
+  await assertAdminRole()
   const adminSupabase = createAdminClient()
   const { error } = await adminSupabase.from('tables').delete().eq('id', id)
   if (error) throw error
@@ -365,10 +371,14 @@ export async function deleteTableAction(id: string) {
 
 export async function getReservations() {
   const orgId = await getCurrentUserOrgId()
+  if (!orgId) return []
   const adminSupabase = createAdminClient()
-  const query = adminSupabase.from('reservations').select('*').order('reservation_date').order('reservation_time')
-  if (orgId) query.eq('org_id', orgId)
-  const { data } = await query
+  const { data } = await adminSupabase
+    .from('reservations')
+    .select('*')
+    .eq('org_id', orgId)
+    .order('reservation_date')
+    .order('reservation_time')
   return data || []
 }
 
@@ -381,6 +391,7 @@ export async function createReservationAction(reservation: {
   number_of_guests: number
   status: string
 }) {
+  await requireAuth()
   const orgId = await getCurrentUserOrgId()
   const adminSupabase = createAdminClient()
   const { error } = await adminSupabase.from('reservations').insert({ ...reservation, org_id: orgId })
@@ -388,6 +399,7 @@ export async function createReservationAction(reservation: {
 }
 
 export async function updateReservationStatusAction(id: string, status: string) {
+  await requireAuth()
   const adminSupabase = createAdminClient()
   const { error } = await adminSupabase.from('reservations').update({ status }).eq('id', id)
   if (error) throw error
@@ -397,10 +409,13 @@ export async function updateReservationStatusAction(id: string, status: string) 
 
 export async function getInventoryItems() {
   const orgId = await getCurrentUserOrgId()
+  if (!orgId) return []
   const adminSupabase = createAdminClient()
-  const query = adminSupabase.from('stock_items').select('*').order('name')
-  if (orgId) query.eq('org_id', orgId)
-  const { data } = await query
+  const { data } = await adminSupabase
+    .from('stock_items')
+    .select('*')
+    .eq('org_id', orgId)
+    .order('name')
   return data || []
 }
 
@@ -412,6 +427,7 @@ export async function addInventoryItemAction(item: {
   reorder_threshold: number
   cost_per_unit_cents: number
 }) {
+  await assertAdminRole()
   const orgId = await getCurrentUserOrgId()
   const adminSupabase = createAdminClient()
   const { error } = await adminSupabase.from('stock_items').insert({ ...item, org_id: orgId })
@@ -419,6 +435,7 @@ export async function addInventoryItemAction(item: {
 }
 
 export async function adjustStockAction(id: string, quantityChange: number, reason: string, currentQuantity: number) {
+  await assertAdminRole()
   const adminSupabase = createAdminClient()
   const newQuantity = currentQuantity + quantityChange
   const { error: updateError } = await adminSupabase.from('stock_items').update({ quantity: newQuantity }).eq('id', id)
@@ -473,6 +490,7 @@ export async function placeOrderAction(
   total: number,
   existingOrderId?: string
 ) {
+  await requireAuth()
   const adminSupabase = createAdminClient()
   let orderId = existingOrderId
 
@@ -508,6 +526,7 @@ export async function checkoutOrderAction(
   paymentMethod: string,
   existingOrderId?: string
 ) {
+  await requireAuth()
   const adminSupabase = createAdminClient()
   let orderId = existingOrderId
 
@@ -555,6 +574,7 @@ export async function checkoutOrderAction(
 }
 
 export async function dismissServiceCallAction(id: string) {
+  await requireAuth()
   const adminSupabase = createAdminClient()
   const { error } = await adminSupabase.from('service_calls').update({ status: 'dismissed' }).eq('id', id)
   if (error) throw error
@@ -584,7 +604,7 @@ export async function submitLeadAction(data: {
   source?: string
 }): Promise<{ success: boolean; error?: string }> {
   const ip = headers().get('x-forwarded-for')?.split(',')[0].trim() || 'unknown'
-  const { allowed } = rateLimit(`lead:${ip}`, 3, 10 * 60_000) // 3 per 10 minutes
+  const { allowed } = await rateLimit(`lead:${ip}`, 3, 10 * 60_000) // 3 per 10 minutes
   if (!allowed) return { success: false, error: 'Too many submissions. Please try again in a few minutes.' }
 
   try {

@@ -54,7 +54,26 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  await supabase.auth.getUser()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  // Redirect unauthenticated users away from protected routes
+  const { pathname } = request.nextUrl
+  const isProtected = pathname.startsWith('/dashboard')
+  const isAuthPage =
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/signup') ||
+    pathname.startsWith('/get-started') ||
+    pathname.startsWith('/book-demo') ||
+    pathname.startsWith('/contact')
+
+  if (isProtected && !user) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/login'
+    return NextResponse.redirect(url)
+  }
+
+  // Suppress unused variable warning — isAuthPage reserved for future redirect-if-logged-in logic
+  void isAuthPage
 
   return response
 }

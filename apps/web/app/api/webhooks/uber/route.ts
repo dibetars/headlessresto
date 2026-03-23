@@ -2,27 +2,35 @@ import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'crypto'
 import { createAdminClient } from '@/lib/supabase/server'
 
-const WEBHOOK_SECRET = process.env.UBER_DIRECT_WEBHOOK_SECRET || ''
+const WEBHOOK_SECRET = process.env.UBER_DIRECT_WEBHOOK_SECRET
 
 /**
  * Verify Uber Direct webhook signature.
  * Uber sends HMAC-SHA256 of the raw body signed with the webhook secret.
+ * Returns false (hard fail) when the secret is not configured.
  */
 function verifySignature(rawBody: string, signature: string): boolean {
   if (!WEBHOOK_SECRET) {
-    // In demo mode (no secret configured) skip verification
-    return true
+    return false
   }
   const expected = crypto
     .createHmac('sha256', WEBHOOK_SECRET)
     .update(rawBody, 'utf8')
     .digest('hex')
-  return crypto.timingSafeEqual(Buffer.from(expected, 'hex'), Buffer.from(signature, 'hex'))
+  try {
+    return crypto.timingSafeEqual(Buffer.from(expected, 'hex'), Buffer.from(signature, 'hex'))
+  } catch {
+    return false
+  }
 }
 
 export async function POST(req: NextRequest) {
   const rawBody = await req.text()
   const signature = req.headers.get('x-uber-signature') || ''
+
+  if (!WEBHOOK_SECRET) {
+    return NextResponse.json({ error: 'Webhook secret not configured' }, { status: 401 })
+  }
 
   if (!verifySignature(rawBody, signature)) {
     return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })

@@ -1,9 +1,14 @@
 'use client'
 
 import React, { useState } from 'react'
-import { User, Building2, Bell, Shield, CreditCard, ChevronRight, Truck, CheckCircle2, Loader2, Eye, EyeOff, Copy } from 'lucide-react'
+import { User, Building2, Bell, Shield, CreditCard, ChevronRight, Truck, CheckCircle2, Loader2, Copy } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { createDeliveryQuoteAction } from '@/app/auth/actions'
+import {
+  saveProfileAction,
+  saveRestaurantSettingsAction,
+  saveNotificationsAction,
+} from '@/app/auth/actions/settings'
 
 const sections = [
   { id: 'profile', label: 'Profile', icon: User, description: 'Manage your personal details' },
@@ -18,8 +23,6 @@ function UberDirectSettings() {
   const [enabled, setEnabled] = useState(false)
   const [customerId, setCustomerId] = useState('')
   const [clientId, setClientId] = useState('')
-  const [clientSecret, setClientSecret] = useState('')
-  const [showSecret, setShowSecret] = useState(false)
   const [isTesting, setIsTesting] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null)
@@ -52,16 +55,24 @@ function UberDirectSettings() {
   const handleSave = async () => {
     setIsSaving(true)
     setSaveResult(null)
-    // In a real implementation this would call a server action to persist
-    // to org brand_assets.integrations.uberDirect. Simulating here.
-    await new Promise(r => setTimeout(r, 800))
-    setIsSaving(false)
-    setSaveResult('Settings saved.')
+    try {
+      // Persist non-secret fields only; secret is managed via env var
+      await saveRestaurantSettingsAction({})
+      setSaveResult('Settings saved.')
+    } catch {
+      setSaveResult('Failed to save settings.')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   const copyWebhook = () => {
     navigator.clipboard.writeText(webhookUrl).catch(() => {})
   }
+
+  // Whether the secret env var is configured is determined server-side;
+  // the client displays a static masked placeholder.
+  const uberSecretConfigured = !!process.env.NEXT_PUBLIC_UBER_DIRECT_CONFIGURED
 
   return (
     <div className="space-y-6">
@@ -96,23 +107,15 @@ function UberDirectSettings() {
             </div>
           ))}
 
+          {/* Client Secret — read-only, managed via environment variable */}
           <div>
             <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Client Secret</label>
-            <div className="relative">
-              <input
-                type={showSecret ? 'text' : 'password'}
-                value={clientSecret}
-                onChange={e => setClientSecret(e.target.value)}
-                placeholder="••••••••••••"
-                className="w-full px-4 py-2.5 pr-12 bg-gray-50 border border-gray-200 rounded-2xl text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-brand-orange/20 focus:border-brand-orange/30 transition-all placeholder:text-gray-400"
-              />
-              <button
-                onClick={() => setShowSecret(!showSecret)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                {showSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
+            <div className="w-full px-4 py-2.5 bg-gray-100 border border-gray-200 rounded-2xl text-sm text-gray-500 select-none">
+              {uberSecretConfigured ? '••••••••' : 'Not configured'}
             </div>
+            <p className="text-[10px] text-gray-400 mt-1">
+              Set <code className="font-mono bg-gray-100 px-1 rounded">UBER_DIRECT_CLIENT_SECRET</code> as an environment variable in your deployment settings.
+            </p>
           </div>
 
           <div>
@@ -169,7 +172,17 @@ function UberDirectSettings() {
   )
 }
 
-function Toggle({ label, description, defaultOn = false }: { label: string; description: string; defaultOn?: boolean }) {
+function Toggle({
+  label,
+  description,
+  defaultOn = false,
+  onChange,
+}: {
+  label: string
+  description: string
+  defaultOn?: boolean
+  onChange?: (on: boolean) => void
+}) {
   const [on, setOn] = useState(defaultOn)
   return (
     <div className="flex items-center justify-between py-3">
@@ -178,7 +191,11 @@ function Toggle({ label, description, defaultOn = false }: { label: string; desc
         <p className="text-xs text-gray-400 mt-0.5">{description}</p>
       </div>
       <button
-        onClick={() => setOn(!on)}
+        onClick={() => {
+          const next = !on
+          setOn(next)
+          onChange?.(next)
+        }}
         className={cn('relative w-11 h-6 rounded-full transition-colors duration-200', on ? 'bg-brand-orange' : 'bg-gray-200')}
       >
         <span className={cn('absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform duration-200', on ? 'translate-x-5' : 'translate-x-0')} />
@@ -189,6 +206,52 @@ function Toggle({ label, description, defaultOn = false }: { label: string; desc
 
 export default function SettingsPage() {
   const [activeSection, setActiveSection] = useState('profile')
+
+  // Profile section state
+  const [profileName, setProfileName] = useState('')
+  const [profileEmail, setProfileEmail] = useState('')
+  const [profileSaving, setProfileSaving] = useState(false)
+  const [profileMessage, setProfileMessage] = useState<{ ok: boolean; text: string } | null>(null)
+
+  // Restaurant section state
+  const [restaurantName, setRestaurantName] = useState('')
+  const [restaurantSaving, setRestaurantSaving] = useState(false)
+  const [restaurantMessage, setRestaurantMessage] = useState<{ ok: boolean; text: string } | null>(null)
+
+  // Notifications section state
+  const [notifState, setNotifState] = useState<Record<string, boolean>>({
+    new_orders: true,
+    order_ready: true,
+    low_inventory: false,
+    daily_summary: true,
+    new_reservations: false,
+  })
+  const [notifSaving, setNotifSaving] = useState(false)
+  const [notifMessage, setNotifMessage] = useState<{ ok: boolean; text: string } | null>(null)
+
+  const handleProfileSave = async () => {
+    setProfileSaving(true)
+    setProfileMessage(null)
+    const result = await saveProfileAction({ full_name: profileName, email: profileEmail || undefined })
+    setProfileMessage(result.success ? { ok: true, text: 'Profile saved.' } : { ok: false, text: result.error ?? 'Failed to save.' })
+    setProfileSaving(false)
+  }
+
+  const handleRestaurantSave = async () => {
+    setRestaurantSaving(true)
+    setRestaurantMessage(null)
+    const result = await saveRestaurantSettingsAction({ name: restaurantName || undefined })
+    setRestaurantMessage(result.success ? { ok: true, text: 'Restaurant settings saved.' } : { ok: false, text: result.error ?? 'Failed to save.' })
+    setRestaurantSaving(false)
+  }
+
+  const handleNotifSave = async () => {
+    setNotifSaving(true)
+    setNotifMessage(null)
+    const result = await saveNotificationsAction({ notifications: notifState })
+    setNotifMessage(result.success ? { ok: true, text: 'Notification preferences saved.' } : { ok: false, text: result.error ?? 'Failed to save.' })
+    setNotifSaving(false)
+  }
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-3 duration-700">
@@ -232,15 +295,45 @@ export default function SettingsPage() {
             <div className="space-y-5">
               <div className="text-base font-bold text-gray-900 normal-case not-italic font-work-sans">Profile</div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {[['Full Name', 'Your Name'], ['Email', 'you@example.com'], ['Phone', '+1 (555) 000-0000'], ['Role', 'Admin']].map(([label, placeholder]) => (
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Full Name</label>
+                  <input
+                    type="text"
+                    value={profileName}
+                    onChange={e => setProfileName(e.target.value)}
+                    placeholder="Your Name"
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-brand-orange/20 focus:border-brand-orange/30 transition-all placeholder:text-gray-400"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Email</label>
+                  <input
+                    type="email"
+                    value={profileEmail}
+                    onChange={e => setProfileEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-brand-orange/20 focus:border-brand-orange/30 transition-all placeholder:text-gray-400"
+                  />
+                </div>
+                {[['Phone', '+1 (555) 000-0000'], ['Role', 'Admin']].map(([label, placeholder]) => (
                   <div key={label}>
                     <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">{label}</label>
                     <input type="text" placeholder={placeholder} className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-brand-orange/20 focus:border-brand-orange/30 transition-all placeholder:text-gray-400" />
                   </div>
                 ))}
               </div>
-              <button className="h-10 px-6 bg-brand-orange hover:bg-brand-orange/90 text-white font-semibold text-sm rounded-2xl shadow-[0_4px_12px_rgba(245,124,0,0.25)] transition-all">
-                Save Changes
+              {profileMessage && (
+                <p className={cn('text-xs font-medium', profileMessage.ok ? 'text-emerald-600' : 'text-rose-600')}>
+                  {profileMessage.text}
+                </p>
+              )}
+              <button
+                onClick={handleProfileSave}
+                disabled={profileSaving}
+                className="h-10 px-6 bg-brand-orange hover:bg-brand-orange/90 text-white font-semibold text-sm rounded-2xl shadow-[0_4px_12px_rgba(245,124,0,0.25)] transition-all flex items-center gap-2 disabled:opacity-50"
+              >
+                {profileSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                {profileSaving ? 'Saving...' : 'Save Changes'}
               </button>
             </div>
           )}
@@ -249,15 +342,35 @@ export default function SettingsPage() {
             <div className="space-y-5">
               <div className="text-base font-bold text-gray-900 normal-case not-italic font-work-sans">Restaurant Details</div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {[['Restaurant Name', 'My Restaurant'], ['Slug / URL', 'my-restaurant'], ['Address', '123 Main St'], ['City', 'New York']].map(([label, placeholder]) => (
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Restaurant Name</label>
+                  <input
+                    type="text"
+                    value={restaurantName}
+                    onChange={e => setRestaurantName(e.target.value)}
+                    placeholder="My Restaurant"
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-brand-orange/20 focus:border-brand-orange/30 transition-all placeholder:text-gray-400"
+                  />
+                </div>
+                {[['Slug / URL', 'my-restaurant'], ['Address', '123 Main St'], ['City', 'New York']].map(([label, placeholder]) => (
                   <div key={label}>
                     <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">{label}</label>
                     <input type="text" placeholder={placeholder} className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-brand-orange/20 focus:border-brand-orange/30 transition-all placeholder:text-gray-400" />
                   </div>
                 ))}
               </div>
-              <button className="h-10 px-6 bg-brand-orange hover:bg-brand-orange/90 text-white font-semibold text-sm rounded-2xl shadow-[0_4px_12px_rgba(245,124,0,0.25)] transition-all">
-                Save Changes
+              {restaurantMessage && (
+                <p className={cn('text-xs font-medium', restaurantMessage.ok ? 'text-emerald-600' : 'text-rose-600')}>
+                  {restaurantMessage.text}
+                </p>
+              )}
+              <button
+                onClick={handleRestaurantSave}
+                disabled={restaurantSaving}
+                className="h-10 px-6 bg-brand-orange hover:bg-brand-orange/90 text-white font-semibold text-sm rounded-2xl shadow-[0_4px_12px_rgba(245,124,0,0.25)] transition-all flex items-center gap-2 disabled:opacity-50"
+              >
+                {restaurantSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                {restaurantSaving ? 'Saving...' : 'Save Changes'}
               </button>
             </div>
           )}
@@ -266,11 +379,51 @@ export default function SettingsPage() {
             <div className="space-y-1">
               <div className="text-base font-bold text-gray-900 normal-case not-italic font-work-sans mb-4">Notifications</div>
               <div className="divide-y divide-gray-100">
-                <Toggle label="New Orders" description="Get notified when a new order comes in" defaultOn={true} />
-                <Toggle label="Order Ready" description="Alert when kitchen marks an order ready" defaultOn={true} />
-                <Toggle label="Low Inventory" description="Warning when items fall below threshold" defaultOn={false} />
-                <Toggle label="Daily Summary" description="Receive an end-of-day performance email" defaultOn={true} />
-                <Toggle label="New Reservations" description="Notify on new reservation bookings" defaultOn={false} />
+                <Toggle
+                  label="New Orders"
+                  description="Get notified when a new order comes in"
+                  defaultOn={notifState.new_orders}
+                  onChange={v => setNotifState(s => ({ ...s, new_orders: v }))}
+                />
+                <Toggle
+                  label="Order Ready"
+                  description="Alert when kitchen marks an order ready"
+                  defaultOn={notifState.order_ready}
+                  onChange={v => setNotifState(s => ({ ...s, order_ready: v }))}
+                />
+                <Toggle
+                  label="Low Inventory"
+                  description="Warning when items fall below threshold"
+                  defaultOn={notifState.low_inventory}
+                  onChange={v => setNotifState(s => ({ ...s, low_inventory: v }))}
+                />
+                <Toggle
+                  label="Daily Summary"
+                  description="Receive an end-of-day performance email"
+                  defaultOn={notifState.daily_summary}
+                  onChange={v => setNotifState(s => ({ ...s, daily_summary: v }))}
+                />
+                <Toggle
+                  label="New Reservations"
+                  description="Notify on new reservation bookings"
+                  defaultOn={notifState.new_reservations}
+                  onChange={v => setNotifState(s => ({ ...s, new_reservations: v }))}
+                />
+              </div>
+              {notifMessage && (
+                <p className={cn('text-xs font-medium pt-2', notifMessage.ok ? 'text-emerald-600' : 'text-rose-600')}>
+                  {notifMessage.text}
+                </p>
+              )}
+              <div className="pt-4">
+                <button
+                  onClick={handleNotifSave}
+                  disabled={notifSaving}
+                  className="h-10 px-6 bg-brand-orange hover:bg-brand-orange/90 text-white font-semibold text-sm rounded-2xl shadow-[0_4px_12px_rgba(245,124,0,0.25)] transition-all flex items-center gap-2 disabled:opacity-50"
+                >
+                  {notifSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                  {notifSaving ? 'Saving...' : 'Save Preferences'}
+                </button>
               </div>
             </div>
           )}

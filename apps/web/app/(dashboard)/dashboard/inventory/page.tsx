@@ -50,6 +50,7 @@ export default function InventoryPage() {
   const [items, setItems] = useState<StockItem[]>([])
   const [loading, setLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [adjustingItemId, setAdjustingItemId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [isAddSheetOpen, setIsAddSheetOpen] = useState(false)
   const [isAdjustSheetOpen, setIsAdjustSheetOpen] = useState(false)
