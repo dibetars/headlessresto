@@ -122,7 +122,7 @@ export default function AnalyticsPage() {
           ) : (
             <div className="space-y-4">
               {Object.entries(statusGroups).map(([status, count]) => {
-                const pct = Math.round((count / orders.length) * 100)
+                const pct = Math.round(((count as number) / orders.length) * 100)
                 return (
                   <div key={status} className="space-y-1.5">
                     <div className="flex justify-between items-center">
