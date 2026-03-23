@@ -556,16 +556,16 @@ export default function Home() {
               </div>
               <div className="space-y-6">
                 <h4 className="text-brand-orange text-[10px] font-medium uppercase tracking-[0.3em]">Company</h4>
-                <div className="flex flex-col gap-4 text-sm font-bold uppercase tracking-widest text-slate-400">
-                  <Link href="/about" className="hover:text-slate-900 transition-colors">About</Link>
-                  <Link href="/blog" className="hover:text-slate-900 transition-colors">Blog</Link>
+                <div className="flex flex-col gap-4 text-sm font-bold uppercase tracking-widest text-slate-700">
+                  <Link href="/about" className="hover:text-black transition-colors">About</Link>
+                  <Link href="/blog" className="hover:text-black transition-colors">Blog</Link>
                 </div>
               </div>
               <div className="space-y-6">
                 <h4 className="text-brand-orange text-[10px] font-medium uppercase tracking-[0.3em]">Legal</h4>
-                <div className="flex flex-col gap-4 text-sm font-bold uppercase tracking-widest text-slate-400">
-                  <Link href="/privacy" className="hover:text-slate-900 transition-colors">Privacy</Link>
-                  <Link href="/terms" className="hover:text-slate-900 transition-colors">Terms</Link>
+                <div className="flex flex-col gap-4 text-sm font-bold uppercase tracking-widest text-slate-700">
+                  <Link href="/privacy" className="hover:text-black transition-colors">Privacy</Link>
+                  <Link href="/terms" className="hover:text-black transition-colors">Terms</Link>
                 </div>
               </div>
             </div>
