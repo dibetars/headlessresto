@@ -1,4 +1,4 @@
-export type UserRole = 'owner' | 'manager' | 'kitchen' | 'waiter' | 'cashier' | 'super_admin' | 'restaurant_admin' | 'admin';
+export type UserRole = 'super_admin' | 'restaurant_admin' | 'owner' | 'admin' | 'manager' | 'kitchen' | 'waiter' | 'cashier';
 
 export interface Restaurant {
   id: string;
@@ -81,4 +81,62 @@ export interface Table {
   table_number: string;
   capacity: number;
   status: 'available' | 'occupied' | 'reserved' | 'cleaning';
+}
+
+export interface StaffMember {
+  id: string;
+  user_id: string;
+  org_id: string;
+  role: UserRole;
+  full_name: string;
+  email: string;
+  joined_at: string;
+}
+
+export interface Organization {
+  id: string;
+  name: string;
+  slug: string;
+  brand_assets?: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface InventoryItem {
+  id: string;
+  org_id: string;
+  name: string;
+  quantity: number;
+  unit: string;
+  reorder_level?: number;
+  created_at: string;
+}
+
+export interface Reservation {
+  id: string;
+  org_id: string;
+  guest_name: string;
+  guest_email?: string;
+  guest_phone?: string;
+  party_size: number;
+  date: string;
+  time: string;
+  status: 'pending' | 'confirmed' | 'cancelled' | 'seated' | 'completed';
+  notes?: string;
+  created_at: string;
+}
+
+export interface DeliveryOrder {
+  id: string;
+  order_id: string;
+  delivery_id: string;
+  status: string;
+  tracking_url?: string;
+  driver?: {
+    name: string;
+    phone?: string;
+    rating?: number;
+    vehicle?: string;
+  };
+  created_at: string;
+  updated_at?: string;
 }
