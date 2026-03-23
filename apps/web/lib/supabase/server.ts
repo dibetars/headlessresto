@@ -1,6 +1,8 @@
-import { createServerClient } from '@supabase/ssr'
+import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
+
+type CookieItem = { name: string; value: string; options: CookieOptions }
 
 export function createClient() {
   const cookieStore = cookies()
@@ -9,22 +11,20 @@ export function createClient() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
-      // NOTE: getAll/setAll is the @supabase/ssr ^0.5.0 API.
-      // Run `pnpm install` after upgrading package.json for types to resolve.
       cookies: {
         getAll() {
           return cookieStore.getAll()
         },
-        setAll(cookiesToSet: { name: string; value: string; options?: Record<string, unknown> }[]) {
+        setAll(cookiesToSet: CookieItem[]) {
           try {
             cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options as any)
+              cookieStore.set(name, value, options)
             )
           } catch {
             // Server Component — cookies set by middleware
           }
         },
-      } as any,
+      },
     }
   )
 }
@@ -36,8 +36,8 @@ export function createAdminClient() {
     {
       auth: {
         autoRefreshToken: false,
-        persistSession: false
-      }
+        persistSession: false,
+      },
     }
   )
 }
