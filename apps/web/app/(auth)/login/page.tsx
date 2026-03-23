@@ -1,75 +1,54 @@
-'use client';
+import React from 'react';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { createClient } from '../../../lib/supabase';
+import { signIn } from '@/app/auth/actions'
 
-export default function LoginPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const router = useRouter();
-  const supabase = createClient();
-
-  async function handleLogin(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-
-    if (error) {
-      setError(error.message);
-      setLoading(false);
-      return;
-    }
-
-    router.push('/dashboard');
-  }
-
+export default function LoginPage({ searchParams }: { searchParams: { error?: string } }) {
   return (
-    <>
-      <h2 className="text-2xl font-semibold mb-6 text-gray-800">Sign in</h2>
-      <form onSubmit={handleLogin} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-          <input
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-            placeholder="you@restaurant.com"
-          />
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="max-w-md w-full p-8 bg-white rounded-2xl shadow-xl border border-gray-100 space-y-6">
+        <div className="text-center">
+          <h1 className="text-3xl font-bold text-primary">HeadlessResto</h1>
+          <p className="text-gray-500 mt-2 text-sm">Sign in to your account</p>
         </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-          <input
-            type="password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-            placeholder="••••••••"
-          />
+        
+        {searchParams.error && (
+          <div className="p-4 bg-red-50 border border-red-100 text-red-600 text-sm rounded-xl">
+            {searchParams.error}
+          </div>
+        )}
+
+        <form action={signIn} className="space-y-4">
+          <div className="space-y-1">
+            <label className="text-sm font-semibold">Email</label>
+            <input 
+              name="email"
+              type="email" 
+              required
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" 
+              placeholder="admin@restaurant.com"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-sm font-semibold">Password</label>
+            <input 
+              name="password"
+              type="password" 
+              required
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" 
+              placeholder="••••••••"
+            />
+          </div>
+          <button className="w-full bg-primary text-white py-4 rounded-xl font-bold text-lg hover:bg-primary/90 transition-colors">
+            Sign In
+          </button>
+        </form>
+        <div className="text-center text-sm text-gray-500">
+          <a href="/auth/forgot-password" title="Forgot Password" className="hover:underline">Forgot password?</a>
+          <div className="mt-4">
+            Don't have an account? <a href="/get-started" className="hover:underline text-primary font-semibold">Get started</a>
+          </div>
         </div>
-        {error && <p className="text-red-500 text-sm">{error}</p>}
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-brand-600 hover:bg-brand-700 text-white font-medium py-2 rounded-lg transition disabled:opacity-50"
-        >
-          {loading ? 'Signing in…' : 'Sign in'}
-        </button>
-      </form>
-      <p className="text-center text-sm text-gray-500 mt-6">
-        No account?{' '}
-        <Link href="/register" className="text-brand-600 hover:underline">
-          Create one
-        </Link>
-      </p>
-    </>
+      </div>
+    </div>
   );
 }
