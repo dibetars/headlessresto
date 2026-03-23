@@ -5,7 +5,7 @@ import { ArrowLeft } from "lucide-react";
 
 export default function TermsPage() {
   return (
-    <div className="flex flex-col min-h-screen bg-background text-foreground font-work-sans overflow-x-hidden">
+    <div className="flex flex-col min-h-screen bg-[#0a0a0a] text-white font-work-sans overflow-x-hidden">
       {/* Navigation */}
       <nav className="fixed top-6 left-1/2 -translate-x-1/2 z-50 transition-all duration-300">
         <div className="flex h-14 items-center bg-black/40 backdrop-blur-xl border border-white/[0.05] rounded-[24px] shadow-2xl px-3 gap-2">
@@ -42,7 +42,7 @@ export default function TermsPage() {
           </div>
         </section>
 
-        <section className="py-24 bg-background">
+        <section className="py-24 bg-[#0a0a0a]">
           <div className="container px-6 max-w-4xl mx-auto">
             <div className="space-y-12 text-white/60 text-lg leading-relaxed">
               <div className="space-y-6">
