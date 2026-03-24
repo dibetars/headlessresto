@@ -50,12 +50,12 @@ WITH org AS (
 ),
 accounts (email, role) AS (
   VALUES
-    ('superadmin@test.headlessresto.com', 'restaurant_admin'::user_role),
+    ('superadmin@test.headlessresto.com', 'super_admin'::user_role),
     ('owner@test.headlessresto.com',      'owner'::user_role),
     ('manager@test.headlessresto.com',    'manager'::user_role),
     ('cashier@test.headlessresto.com',    'cashier'::user_role),
-    ('kitchen@test.headlessresto.com',    'kitchen'::user_role),
-    ('waiter@test.headlessresto.com',     'waiter'::user_role)
+    ('kitchen@test.headlessresto.com',    'kitchen_staff'::user_role),
+    ('waiter@test.headlessresto.com',     'wait_staff'::user_role)
 )
 INSERT INTO public.org_memberships (org_id, user_id, role)
 SELECT org.org_id, u.id, a.role

@@ -75,7 +75,7 @@ export function DashboardLayout({ children, role, userName, restaurantName, full
           <NavItem icon={<LayoutDashboard className="w-4 h-4" />} label="Dashboard" href="/dashboard" active={pathname === '/dashboard'} onClick={() => setSidebarOpen(false)} />
         </NavGroup>
 
-        {(role === 'restaurant_admin' || role === 'cashier' || role === 'owner' || role === 'manager' || role === 'admin') && (
+        {(role === 'owner' || role === 'manager' || role === 'cashier') && (
           <NavGroup label="Operations">
             {feat('pos') && <NavItem icon={<Calculator className="w-4 h-4" />} label="POS Terminal" href="/dashboard/pos" active={pathname === '/dashboard/pos'} onClick={() => setSidebarOpen(false)} />}
             {feat('kds') && <NavItem icon={<MonitorPlay className="w-4 h-4" />} label="Kitchen Display" href="/dashboard/kds" active={pathname === '/dashboard/kds'} onClick={() => setSidebarOpen(false)} />}
@@ -91,7 +91,7 @@ export function DashboardLayout({ children, role, userName, restaurantName, full
           </NavGroup>
         )}
 
-        {(role === 'restaurant_admin' || role === 'owner' || role === 'manager' || role === 'admin') && (
+        {(role === 'owner' || role === 'manager') && (
           <NavGroup label="Insights">
             {feat('analytics') && <NavItem icon={<TrendingUp className="w-4 h-4" />} label="Analytics" href="/dashboard/analytics" active={pathname === '/dashboard/analytics'} onClick={() => setSidebarOpen(false)} />}
             {feat('inventory') && <NavItem icon={<Package className="w-4 h-4" />} label="Inventory" href="/dashboard/inventory" active={pathname === '/dashboard/inventory'} onClick={() => setSidebarOpen(false)} />}

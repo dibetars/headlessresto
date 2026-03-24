@@ -58,15 +58,14 @@ export default function DashboardPage() {
     switch (profile.role) {
       case 'super_admin':
         return <SuperAdminDashboard />
-      case 'admin':
-      case 'restaurant_admin':
       case 'owner':
       case 'manager':
         return <RestaurantAdminDashboard />
-      case 'kitchen':
+      case 'kitchen_staff':
         return <KitchenDashboard />
-      case 'waiter':
+      case 'wait_staff':
       case 'cashier':
+      case 'delivery_driver':
         return <StaffDashboard />
       default:
         return <RestaurantAdminDashboard />

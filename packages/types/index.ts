@@ -1,4 +1,4 @@
-export type UserRole = 'super_admin' | 'restaurant_admin' | 'owner' | 'admin' | 'manager' | 'kitchen' | 'waiter' | 'cashier';
+export type UserRole = 'super_admin' | 'owner' | 'manager' | 'cashier' | 'kitchen_staff' | 'wait_staff' | 'delivery_driver';
 
 export interface Restaurant {
   id: string;
