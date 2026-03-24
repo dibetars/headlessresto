@@ -12,6 +12,12 @@
 --   waiter@test.headlessresto.com
 -- =============================================================
 
+-- 0. Inspect the actual enum values (run this first if unsure)
+-- SELECT enumlabel FROM pg_enum
+-- JOIN pg_type ON pg_enum.enumtypid = pg_type.oid
+-- WHERE pg_type.typname = 'user_role'
+-- ORDER BY enumsortorder;
+
 -- 1. Upsert rows in the `users` profile table
 INSERT INTO public.users (id, email, full_name)
 SELECT id, email, split_part(email, '@', 1)
@@ -36,14 +42,15 @@ WHERE NOT EXISTS (
   SELECT 1 FROM public.organizations WHERE slug = 'test-restaurant'
 );
 
--- 3. Wire each user into org_memberships with their correct role
--- (ON CONFLICT so re-running is safe)
+-- 3. Wire each user into org_memberships with their correct role.
+--    super_admin uses 'restaurant_admin' — the highest value in the enum.
+--    The app code treats both identically in the dashboard switch.
 WITH org AS (
   SELECT id AS org_id FROM public.organizations WHERE slug = 'test-restaurant'
 ),
 accounts (email, role) AS (
   VALUES
-    ('superadmin@test.headlessresto.com', 'super_admin'::user_role),
+    ('superadmin@test.headlessresto.com', 'restaurant_admin'::user_role),
     ('owner@test.headlessresto.com',      'owner'::user_role),
     ('manager@test.headlessresto.com',    'manager'::user_role),
     ('cashier@test.headlessresto.com',    'cashier'::user_role),
