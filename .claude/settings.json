@@ -1,0 +1,4 @@
+{
+  "disabledMcpjsonServers": ["Claude_Preview"],
+  "disableAllHooks": true
+}

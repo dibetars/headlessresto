@@ -1,17 +1,14 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { 
-  ShoppingBag, 
-  Search, 
-  Filter, 
-  Clock, 
-  ChevronRight, 
-  CheckCircle2, 
-  XCircle, 
-  AlertCircle,
-  MoreVertical,
+import {
+  ShoppingBag,
+  Search,
+  Clock,
+  ChevronRight,
+  CheckCircle2,
+  XCircle,
   Calendar,
   DollarSign,
   Printer,
@@ -20,29 +17,55 @@ import {
   Wallet,
   UtensilsCrossed,
   CheckSquare,
-  Play
+  Play,
+  Truck,
+  MapPin,
+  Phone,
+  User,
+  Star,
+  ExternalLink,
+  Loader2
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from '@/components/ui/table'
-import { 
-  Sheet, 
-  SheetContent, 
-  SheetHeader, 
-  SheetTitle, 
-  SheetDescription 
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription
 } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
-import { getOrders, updateOrderStatusAction } from '@/app/auth/actions'
+import {
+  getOrders,
+  updateOrderStatusAction,
+  dispatchDeliveryAction,
+  getDeliveryStatusAction,
+  cancelDeliveryAction,
+} from '@/app/auth/actions'
+
+interface DeliveryInfo {
+  deliveryId: string
+  status: string
+  trackingUrl?: string
+  driver?: {
+    name?: string
+    rating?: string
+    picture_url?: string
+    vehicle_make_model?: string
+    license_plate?: string
+  }
+}
 
 interface OrderItem {
   id: string
@@ -73,9 +96,20 @@ export default function DashboardOrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [isDetailSheetOpen, setIsDetailSheetOpen] = useState(false)
 
-  const supabase = createClient()
+  // Delivery dispatch state
+  const [deliveryInfo, setDeliveryInfo] = useState<DeliveryInfo | null>(null)
+  const [showDispatchForm, setShowDispatchForm] = useState(false)
+  const [dispatchAddress, setDispatchAddress] = useState('')
+  const [dispatchPhone, setDispatchPhone] = useState('')
+  const [dispatchName, setDispatchName] = useState('')
+  const [isDispatching, setIsDispatching] = useState(false)
+  const [isCancellingDelivery, setIsCancellingDelivery] = useState(false)
+  const [deliveryError, setDeliveryError] = useState<string | null>(null)
+
+  const supabaseRef = useRef(createClient())
 
   useEffect(() => {
+    const supabase = supabaseRef.current
     fetchOrders()
 
     // Real-time subscription
@@ -103,6 +137,109 @@ export default function DashboardOrdersPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  // Realtime subscription for delivery status updates
+  useEffect(() => {
+    if (!deliveryInfo?.deliveryId) return
+
+    const supabase = supabaseRef.current
+    const channel = supabase
+      .channel(`delivery:${deliveryInfo.deliveryId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'delivery_orders',
+          filter: `delivery_id=eq.${deliveryInfo.deliveryId}`,
+        },
+        (payload) => {
+          const updated = payload.new as any
+          setDeliveryInfo(prev => prev ? {
+            ...prev,
+            status: updated.status,
+            trackingUrl: updated.tracking_url,
+            driver: updated.driver,
+          } : null)
+        }
+      )
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [deliveryInfo?.deliveryId])
+
+  // Reset delivery state when sheet closes or a different order is selected
+  const openOrderDetail = (order: Order) => {
+    setSelectedOrder(order)
+    setDeliveryInfo(null)
+    setShowDispatchForm(false)
+    setDispatchAddress('')
+    setDispatchPhone('')
+    setDispatchName('')
+    setDeliveryError(null)
+    setIsDetailSheetOpen(true)
+  }
+
+  const handleDispatch = async () => {
+    if (!selectedOrder || !dispatchAddress || !dispatchPhone || !dispatchName) return
+    setIsDispatching(true)
+    setDeliveryError(null)
+    const res = await dispatchDeliveryAction(
+      selectedOrder.id,
+      dispatchAddress,
+      dispatchName,
+      dispatchPhone
+    )
+    setIsDispatching(false)
+    if (res.success && res.delivery) {
+      setDeliveryInfo({
+        deliveryId: res.delivery.id,
+        status: res.delivery.status,
+        trackingUrl: res.delivery.tracking_url,
+        driver: res.delivery.courier || res.delivery.driver || undefined,
+      })
+      setShowDispatchForm(false)
+    } else {
+      setDeliveryError(res.error || 'Dispatch failed')
+    }
+  }
+
+  const handleCancelDelivery = async () => {
+    if (!deliveryInfo) return
+    setIsCancellingDelivery(true)
+    const res = await cancelDeliveryAction(deliveryInfo.deliveryId)
+    setIsCancellingDelivery(false)
+    if (res.success) {
+      setDeliveryInfo(prev => prev ? { ...prev, status: 'cancelled' } : prev)
+    } else {
+      setDeliveryError(res.error || 'Cancel failed')
+    }
+  }
+
+  const deliveryStatusColor = (status: string) => {
+    switch (status) {
+      case 'pending': return 'bg-amber-50 text-amber-600'
+      case 'pickup': return 'bg-blue-50 text-blue-600'
+      case 'pickup_complete': return 'bg-indigo-50 text-indigo-600'
+      case 'dropoff': return 'bg-purple-50 text-purple-600'
+      case 'delivered': return 'bg-emerald-50 text-emerald-600'
+      case 'cancelled': return 'bg-rose-50 text-rose-500'
+      default: return 'bg-gray-100 text-gray-500'
+    }
+  }
+
+  const deliveryStatusLabel = (status: string) => {
+    const labels: Record<string, string> = {
+      pending: 'Finding Driver',
+      pickup: 'Driver En Route to Pickup',
+      pickup_complete: 'Order Picked Up',
+      dropoff: 'En Route to Customer',
+      delivered: 'Delivered',
+      cancelled: 'Cancelled',
+      returned: 'Returned',
+    }
+    return labels[status] || status
   }
 
   const updateOrderStatus = async (orderId: string, newStatus: string) => {
@@ -376,10 +513,7 @@ export default function DashboardOrdersPage() {
                     <TableCell className="py-4 px-6 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <Button
-                          onClick={() => {
-                            setSelectedOrder(order)
-                            setIsDetailSheetOpen(true)
-                          }}
+                          onClick={() => openOrderDetail(order)}
                           variant="outline"
                           className="h-9 w-9 rounded-xl border-gray-200 bg-white hover:bg-gray-50 p-0"
                         >
@@ -555,6 +689,153 @@ export default function DashboardOrdersPage() {
                     <span className="text-base font-bold text-gray-900">Total Amount</span>
                     <span className="text-2xl font-black text-brand-orange">${selectedOrder.total.toFixed(2)}</span>
                   </div>
+                </div>
+
+                {/* Delivery Section */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+                    <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                      <Truck className="w-4 h-4 text-brand-orange" />
+                      Uber Direct Delivery
+                    </h3>
+                  </div>
+
+                  {deliveryError && (
+                    <div className="text-xs text-rose-500 bg-rose-50 rounded-xl px-4 py-3">
+                      {deliveryError}
+                    </div>
+                  )}
+
+                  {!deliveryInfo && !showDispatchForm && (
+                    <Button
+                      onClick={() => setShowDispatchForm(true)}
+                      variant="outline"
+                      className="w-full h-11 rounded-xl border-brand-orange/30 text-brand-orange hover:bg-brand-orange/5 font-semibold text-sm flex items-center justify-center gap-2"
+                    >
+                      <Truck className="w-4 h-4" />
+                      Dispatch via Uber
+                    </Button>
+                  )}
+
+                  {showDispatchForm && !deliveryInfo && (
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">
+                          Customer Name
+                        </label>
+                        <div className="relative">
+                          <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                          <input
+                            value={dispatchName}
+                            onChange={e => setDispatchName(e.target.value)}
+                            placeholder="Jane Smith"
+                            className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-orange/20 focus:border-brand-orange/30"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">
+                          Delivery Address
+                        </label>
+                        <div className="relative">
+                          <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                          <input
+                            value={dispatchAddress}
+                            onChange={e => setDispatchAddress(e.target.value)}
+                            placeholder="123 Customer St, City, State 00000"
+                            className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-orange/20 focus:border-brand-orange/30"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">
+                          Customer Phone
+                        </label>
+                        <div className="relative">
+                          <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                          <input
+                            value={dispatchPhone}
+                            onChange={e => setDispatchPhone(e.target.value)}
+                            placeholder="+1 (555) 000-0000"
+                            type="tel"
+                            className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-orange/20 focus:border-brand-orange/30"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={handleDispatch}
+                          disabled={isDispatching || !dispatchAddress || !dispatchPhone || !dispatchName}
+                          className="flex-1 h-11 rounded-xl bg-brand-orange hover:bg-brand-orange/90 text-white font-bold text-sm border-none shadow-[0_4px_12px_rgba(245,124,0,0.2)] flex items-center justify-center gap-2"
+                        >
+                          {isDispatching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Truck className="w-4 h-4" />}
+                          {isDispatching ? 'Dispatching...' : 'Dispatch Now'}
+                        </Button>
+                        <Button
+                          onClick={() => setShowDispatchForm(false)}
+                          variant="outline"
+                          className="h-11 px-4 rounded-xl border-gray-200 text-gray-500"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {deliveryInfo && (
+                    <div className="bg-gray-50 border border-gray-100 rounded-2xl p-5 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <Badge className={cn('px-3 py-1 rounded-lg font-semibold uppercase tracking-wider text-[9px] border-none', deliveryStatusColor(deliveryInfo.status))}>
+                          {deliveryStatusLabel(deliveryInfo.status)}
+                        </Badge>
+                        {deliveryInfo.trackingUrl && (
+                          <a
+                            href={deliveryInfo.trackingUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 text-[10px] font-semibold text-brand-orange hover:underline"
+                          >
+                            Track Live <ExternalLink className="w-3 h-3" />
+                          </a>
+                        )}
+                      </div>
+
+                      {deliveryInfo.driver?.name && (
+                        <div className="flex items-center gap-4 pt-2 border-t border-gray-100">
+                          <div className="w-10 h-10 rounded-full bg-brand-orange/10 flex items-center justify-center text-brand-orange font-bold text-sm">
+                            {deliveryInfo.driver.name.charAt(0)}
+                          </div>
+                          <div className="flex-1">
+                            <div className="font-semibold text-gray-900 text-sm">{deliveryInfo.driver.name}</div>
+                            {deliveryInfo.driver.vehicle_make_model && (
+                              <div className="text-[10px] text-gray-400 mt-0.5">
+                                {deliveryInfo.driver.vehicle_make_model}
+                                {deliveryInfo.driver.license_plate && ` · ${deliveryInfo.driver.license_plate}`}
+                              </div>
+                            )}
+                          </div>
+                          {deliveryInfo.driver.rating && (
+                            <div className="flex items-center gap-1">
+                              <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
+                              <span className="text-xs font-bold text-gray-700">{deliveryInfo.driver.rating}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {!['delivered', 'cancelled', 'returned'].includes(deliveryInfo.status) && (
+                        <Button
+                          onClick={handleCancelDelivery}
+                          disabled={isCancellingDelivery}
+                          variant="outline"
+                          className="w-full h-10 rounded-xl border-rose-200 text-rose-500 hover:bg-rose-50 font-semibold text-sm flex items-center justify-center gap-2"
+                        >
+                          {isCancellingDelivery ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
+                          Cancel Delivery
+                        </Button>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex gap-3 pt-2">

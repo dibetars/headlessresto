@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { getReservations, createReservationAction, updateReservationStatusAction } from '@/app/auth/actions'
 import { 
   Calendar, 
   Clock, 
@@ -66,8 +66,6 @@ export default function ReservationsPage() {
     status: 'pending'
   })
 
-  const supabase = createClient()
-
   useEffect(() => {
     fetchReservations()
   }, [])
@@ -75,14 +73,8 @@ export default function ReservationsPage() {
   const fetchReservations = async () => {
     try {
       setLoading(true)
-      const { data, error } = await supabase
-        .from('reservations')
-        .select('*')
-        .order('reservation_date', { ascending: true })
-        .order('reservation_time', { ascending: true })
-
-      if (error) throw error
-      setReservations(data || [])
+      const data = await getReservations()
+      setReservations(data as Reservation[])
     } catch (error: any) {
       console.error('Error fetching reservations:', error.message)
     } finally {
@@ -93,12 +85,7 @@ export default function ReservationsPage() {
   const handleUpdateStatus = async (id: string, status: string) => {
     try {
       setIsSubmitting(true)
-      const { error } = await supabase
-        .from('reservations')
-        .update({ status })
-        .eq('id', id)
-
-      if (error) throw error
+      await updateReservationStatusAction(id, status)
       fetchReservations()
     } catch (error: any) {
       alert('Error updating reservation: ' + error.message)
@@ -111,16 +98,10 @@ export default function ReservationsPage() {
     try {
       if (!newReservation.customer_name || !newReservation.reservation_date) return
       setIsSubmitting(true)
-      
-      const { error } = await supabase
-        .from('reservations')
-        .insert([{
-          ...newReservation,
-          reservation_date: `${newReservation.reservation_date}T${newReservation.reservation_time}:00`
-        }])
-
-      if (error) throw error
-      
+      await createReservationAction({
+        ...newReservation,
+        reservation_date: `${newReservation.reservation_date}T${newReservation.reservation_time}:00`,
+      })
       setIsAddSheetOpen(false)
       setNewReservation({
         customer_name: '',

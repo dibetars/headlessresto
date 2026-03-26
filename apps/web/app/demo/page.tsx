@@ -3,12 +3,12 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { 
-  QrCode, 
-  ChefHat, 
-  LayoutDashboard, 
-  Utensils, 
-  ArrowRight, 
+import {
+  QrCode,
+  ChefHat,
+  LayoutDashboard,
+  Utensils,
+  ArrowRight,
   ArrowLeft,
   CheckCircle2,
   Clock,
@@ -30,7 +30,12 @@ import {
   Plus,
   Minus,
   Trash2,
-  AlertTriangle
+  AlertTriangle,
+  Truck,
+  MapPin,
+  Star,
+  Navigation,
+  Package
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -84,6 +89,14 @@ const demoSteps: Step[] = [
     video: "/Source/media/header7.mp4",
     icon: <LayoutDashboard className="h-6 w-6" />,
   },
+  {
+    id: "delivery",
+    role: "delivery" as any,
+    title: "Step 6: Uber Direct Delivery",
+    description: "Dispatch deliveries instantly via Uber Direct — your white-label delivery fleet. Track in real-time from driver assignment to doorstep.",
+    video: "/Source/media/header2.mp4",
+    icon: <Truck className="h-6 w-6" />,
+  },
 ];
 
 export default function DemoWalkthrough() {
@@ -102,6 +115,19 @@ export default function DemoWalkthrough() {
   // Loading States for Real Feel
   const [isAddingToCart, setIsAddingToCart] = useState<number | null>(null);
   const [isProcessingAction, setIsProcessingAction] = useState(false);
+
+  // Delivery demo state
+  const DELIVERY_STAGES = [
+    { id: 'placed', label: 'Order Placed', icon: Package, color: 'text-amber-400' },
+    { id: 'dispatched', label: 'Dispatched to Uber', icon: Zap, color: 'text-blue-400' },
+    { id: 'assigned', label: 'Driver Assigned', icon: Star, color: 'text-purple-400' },
+    { id: 'en_route', label: 'Driver En Route', icon: Navigation, color: 'text-orange-400' },
+    { id: 'delivered', label: 'Delivered', icon: CheckCircle2, color: 'text-green-400' },
+  ] as const;
+  type DeliveryStageId = typeof DELIVERY_STAGES[number]['id'];
+  const [deliveryStage, setDeliveryStage] = useState<number>(0);
+  const [deliveryMinutes, setDeliveryMinutes] = useState(15);
+  const [deliveryPlaying, setDeliveryPlaying] = useState(false);
 
   const nextStep = () => {
     setIsProcessingAction(true);
@@ -137,6 +163,26 @@ export default function DemoWalkthrough() {
     }
     return () => clearInterval(timer);
   }, [isAutoPlaying, currentStep]);
+
+  // Delivery demo: auto-advance stages every 2.5s when playing
+  useEffect(() => {
+    if (!deliveryPlaying) return;
+    if (deliveryStage >= DELIVERY_STAGES.length - 1) {
+      setDeliveryPlaying(false);
+      return;
+    }
+    const t = setTimeout(() => {
+      setDeliveryStage(prev => prev + 1);
+      setDeliveryMinutes(prev => Math.max(0, prev - Math.floor(Math.random() * 3 + 2)));
+    }, 2500);
+    return () => clearTimeout(t);
+  }, [deliveryPlaying, deliveryStage]);
+
+  const startDeliveryDemo = () => {
+    setDeliveryStage(0);
+    setDeliveryMinutes(15);
+    setDeliveryPlaying(true);
+  };
 
   const addToCart = (item: any, index: number) => {
     setIsAddingToCart(index);
@@ -644,6 +690,136 @@ export default function DemoWalkthrough() {
                           </div>
                         </div>
                       </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 4. Delivery Demo Frame */}
+                {(step as any).role === "delivery" && (
+                  <div className="relative w-[420px] bg-[#111] rounded-[2rem] border border-white/10 shadow-2xl overflow-hidden transition-all">
+                    {/* Header */}
+                    <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-xl bg-brand-orange/10 flex items-center justify-center">
+                          <Truck className="h-4 w-4 text-brand-orange" />
+                        </div>
+                        <span className="text-[10px] font-bold text-white uppercase tracking-[0.2em]">Uber Direct Dispatch</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                        <span className="text-[9px] font-bold text-white/40 uppercase">LIVE</span>
+                      </div>
+                    </div>
+
+                    {/* Stage Progress */}
+                    <div className="px-6 py-5 space-y-3">
+                      {DELIVERY_STAGES.map((stage, idx) => {
+                        const Icon = stage.icon;
+                        const isDone = idx < deliveryStage;
+                        const isActive = idx === deliveryStage;
+                        return (
+                          <div key={stage.id} className={`flex items-center gap-4 transition-all duration-500 ${isDone || isActive ? 'opacity-100' : 'opacity-30'}`}>
+                            <div className={`h-9 w-9 rounded-xl flex items-center justify-center shrink-0 transition-all duration-500 ${
+                              isDone ? 'bg-green-500/20 border border-green-500/30' :
+                              isActive ? 'bg-brand-orange/20 border border-brand-orange/30' :
+                              'bg-white/5 border border-white/10'
+                            }`}>
+                              <Icon className={`h-4 w-4 ${isDone ? 'text-green-400' : isActive ? 'text-brand-orange' : 'text-white/30'}`} />
+                            </div>
+                            <div className="flex-1">
+                              <div className={`text-[10px] font-bold uppercase tracking-widest ${isDone ? 'text-green-400' : isActive ? 'text-white' : 'text-white/30'}`}>
+                                {stage.label}
+                              </div>
+                              {isActive && deliveryPlaying && idx < DELIVERY_STAGES.length - 1 && (
+                                <div className="h-1 mt-1.5 rounded-full bg-white/10 overflow-hidden">
+                                  <div className="h-full bg-brand-orange rounded-full animate-[grow_2.5s_linear_forwards]" style={{ animation: 'width 2.5s linear forwards', width: '100%' }} />
+                                </div>
+                              )}
+                            </div>
+                            {isDone && <CheckCircle2 className="h-4 w-4 text-green-400 shrink-0" />}
+                            {isActive && deliveryPlaying && <div className="h-4 w-4 border-2 border-brand-orange border-t-transparent rounded-full animate-spin shrink-0" />}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Mock Map Placeholder */}
+                    <div className="mx-6 rounded-2xl overflow-hidden h-28 relative mb-4">
+                      <div className="absolute inset-0 bg-gradient-to-br from-[#1a2744] via-[#1e3a6e] to-[#0f2035]" />
+                      <div className="absolute inset-0 opacity-20"
+                        style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 20px, rgba(255,255,255,0.05) 20px, rgba(255,255,255,0.05) 21px), repeating-linear-gradient(90deg, transparent, transparent 20px, rgba(255,255,255,0.05) 20px, rgba(255,255,255,0.05) 21px)' }}
+                      />
+                      {/* Route line */}
+                      <svg className="absolute inset-0 w-full h-full" viewBox="0 0 420 112" preserveAspectRatio="none">
+                        <path d="M 60 90 Q 150 20 220 56 Q 290 90 360 30" stroke="rgba(245,124,0,0.6)" strokeWidth="2" fill="none" strokeDasharray="6 3" />
+                      </svg>
+                      {/* Restaurant pin */}
+                      <div className="absolute left-12 bottom-5 flex flex-col items-center">
+                        <div className="h-6 w-6 rounded-full bg-brand-orange flex items-center justify-center shadow-lg shadow-brand-orange/50">
+                          <Utensils className="h-3 w-3 text-white" />
+                        </div>
+                        <div className="text-[7px] font-bold text-white/60 mt-1 uppercase">Restaurant</div>
+                      </div>
+                      {/* Customer pin */}
+                      <div className="absolute right-10 top-4 flex flex-col items-center">
+                        <div className="h-6 w-6 rounded-full bg-green-500 flex items-center justify-center shadow-lg shadow-green-500/50">
+                          <MapPin className="h-3 w-3 text-white" />
+                        </div>
+                        <div className="text-[7px] font-bold text-white/60 mt-1 uppercase">Customer</div>
+                      </div>
+                      {/* Moving driver dot */}
+                      {deliveryStage >= 3 && (
+                        <div className="absolute" style={{ left: '50%', top: '50%', transform: 'translate(-50%,-50%)' }}>
+                          <div className="h-5 w-5 rounded-full bg-white border-2 border-brand-orange flex items-center justify-center shadow-lg animate-pulse">
+                            <Navigation className="h-2.5 w-2.5 text-brand-orange" />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Driver Card */}
+                    {deliveryStage >= 2 && (
+                      <div className="mx-6 mb-4 p-4 rounded-xl bg-white/5 border border-white/10 flex items-center gap-4">
+                        <div className="h-10 w-10 rounded-full bg-gradient-to-br from-brand-orange to-amber-500 flex items-center justify-center text-white font-bold text-sm shrink-0">M</div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[10px] font-bold text-white uppercase tracking-widest">Marcus R.</div>
+                          <div className="text-[9px] text-white/40 mt-0.5">Toyota Prius · ABC-1234</div>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <Star className="h-3 w-3 text-amber-400 fill-amber-400" />
+                          <span className="text-[10px] font-bold text-white">4.92</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ETA + CTA */}
+                    <div className="px-6 pb-6 space-y-3">
+                      {deliveryStage < DELIVERY_STAGES.length - 1 && (
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-4 w-4 text-white/30" />
+                            <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Est. Delivery</span>
+                          </div>
+                          <span className="text-sm font-black text-white">{deliveryMinutes} min</span>
+                        </div>
+                      )}
+                      {deliveryStage === DELIVERY_STAGES.length - 1 && (
+                        <div className="flex items-center justify-center gap-2 py-2">
+                          <CheckCircle2 className="h-5 w-5 text-green-400" />
+                          <span className="text-xs font-bold text-green-400 uppercase tracking-widest">Order Delivered Successfully</span>
+                        </div>
+                      )}
+                      <button
+                        onClick={startDeliveryDemo}
+                        className="w-full h-11 rounded-xl bg-brand-orange hover:bg-amber-500 text-white text-[10px] font-bold uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2"
+                      >
+                        {deliveryPlaying ? (
+                          <div className="h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <Truck className="h-4 w-4" />
+                        )}
+                        {deliveryPlaying ? 'Simulating...' : deliveryStage > 0 ? 'Replay Demo' : 'Start Delivery Demo'}
+                      </button>
                     </div>
                   </div>
                 )}

@@ -224,25 +224,19 @@ export default function Home() {
   const handleTrialClick = (e: React.MouseEvent) => {
     e.preventDefault();
     setIsTrialLoading(true);
-    setTimeout(() => {
-      router.push("/get-started");
-    }, 800);
+    router.push("/get-started");
   };
 
   const handleGetStartedClick = (e: React.MouseEvent) => {
     e.preventDefault();
     setIsGetStartedLoading(true);
-    setTimeout(() => {
-      router.push("/get-started");
-    }, 800);
+    router.push("/get-started");
   };
 
   const handleDemoClick = (e: React.MouseEvent) => {
     e.preventDefault();
     setIsDemoLoading(true);
-    setTimeout(() => {
-      router.push("/book-demo");
-    }, 800);
+    router.push("/book-demo");
   };
 
   return (
@@ -285,10 +279,10 @@ export default function Home() {
 
       <main className="flex-1">
         {/* Hero Section */}
-        <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden pt-32 pb-20">
+        <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden pt-32 pb-20 bg-black">
           <div className="absolute inset-0 z-0 overflow-hidden">
             <HeroVideoCarousel />
-            <div className="absolute inset-0 bg-black/50" />
+            <div className="absolute inset-0 bg-black/40" />
           </div>
 
           <div className="container relative z-10 px-6">
@@ -328,7 +322,7 @@ export default function Home() {
           <div className="container px-6 relative z-10">
             <div className="text-center max-w-2xl mx-auto mb-16">
               <div className="text-brand-orange text-[10px] font-medium uppercase tracking-[0.4em] mb-4">● Platform</div>
-              <h2 className="mb-8">Every tool your team needs. One platform.</h2>
+              <h2 className="mb-8 text-white">Every tool your team needs. One platform.</h2>
               <p className="text-white/40 text-base font-bold uppercase tracking-tight max-w-2xl mx-auto">From the kitchen screen to the cashier's till — everything talks to each other, in real time, even when the WiFi drops.</p>
             </div>
             
@@ -547,25 +541,25 @@ export default function Home() {
               <div className="space-y-6">
                 <h4 className="text-brand-orange text-[10px] font-medium uppercase tracking-[0.3em]">Platform</h4>
                 <div className="flex flex-col gap-4 text-sm font-bold uppercase tracking-widest text-slate-400">
-                  <Link href="#features" className="hover:text-slate-900 transition-colors">Features</Link>
-                  <Link href="#operators" className="hover:text-slate-900 transition-colors">Operators</Link>
-                  <Link href="#pricing" className="hover:text-slate-900 transition-colors">Pricing</Link>
+                  <Link href="/#features" className="hover:text-slate-900 transition-colors">Features</Link>
+                  <Link href="/#operators" className="hover:text-slate-900 transition-colors">Operators</Link>
+                  <Link href="/#pricing" className="hover:text-slate-900 transition-colors">Pricing</Link>
                   <Link href="/demo" className="hover:text-slate-900 transition-colors">Live Demo</Link>
                   <Link href="/book-demo" className="hover:text-slate-900 transition-colors">Book a Demo</Link>
                 </div>
               </div>
               <div className="space-y-6">
                 <h4 className="text-brand-orange text-[10px] font-medium uppercase tracking-[0.3em]">Company</h4>
-                <div className="flex flex-col gap-4 text-sm font-bold uppercase tracking-widest text-slate-400">
-                  <Link href="/about" className="hover:text-slate-900 transition-colors">About</Link>
-                  <Link href="/blog" className="hover:text-slate-900 transition-colors">Blog</Link>
+                <div className="flex flex-col gap-4 text-sm font-bold uppercase tracking-widest text-slate-700">
+                  <Link href="/about" className="hover:text-black transition-colors">About</Link>
+                  <Link href="/blog" className="hover:text-black transition-colors">Blog</Link>
                 </div>
               </div>
               <div className="space-y-6">
                 <h4 className="text-brand-orange text-[10px] font-medium uppercase tracking-[0.3em]">Legal</h4>
-                <div className="flex flex-col gap-4 text-sm font-bold uppercase tracking-widest text-slate-400">
-                  <Link href="/privacy" className="hover:text-slate-900 transition-colors">Privacy</Link>
-                  <Link href="/terms" className="hover:text-slate-900 transition-colors">Terms</Link>
+                <div className="flex flex-col gap-4 text-sm font-bold uppercase tracking-widest text-slate-700">
+                  <Link href="/privacy" className="hover:text-black transition-colors">Privacy</Link>
+                  <Link href="/terms" className="hover:text-black transition-colors">Terms</Link>
                 </div>
               </div>
             </div>
