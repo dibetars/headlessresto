@@ -43,8 +43,7 @@ WHERE NOT EXISTS (
 );
 
 -- 3. Wire each user into org_memberships with their correct role.
---    super_admin uses 'restaurant_admin' — the highest value in the enum.
---    The app code treats both identically in the dashboard switch.
+--    Uses DELETE + INSERT so it works even without a unique constraint.
 WITH org AS (
   SELECT id AS org_id FROM public.organizations WHERE slug = 'test-restaurant'
 ),
@@ -56,14 +55,19 @@ accounts (email, role) AS (
     ('cashier@test.headlessresto.com',    'cashier'::user_role),
     ('kitchen@test.headlessresto.com',    'kitchen_staff'::user_role),
     ('waiter@test.headlessresto.com',     'wait_staff'::user_role)
+),
+to_insert AS (
+  SELECT org.org_id, u.id AS user_id, a.role
+  FROM accounts a
+  JOIN auth.users u ON u.email = a.email
+  CROSS JOIN org
 )
 INSERT INTO public.org_memberships (org_id, user_id, role)
-SELECT org.org_id, u.id, a.role
-FROM accounts a
-JOIN auth.users u ON u.email = a.email
-CROSS JOIN org
-ON CONFLICT (org_id, user_id) DO UPDATE
-  SET role = EXCLUDED.role;
+SELECT org_id, user_id, role FROM to_insert
+WHERE NOT EXISTS (
+  SELECT 1 FROM public.org_memberships m
+  WHERE m.org_id = to_insert.org_id AND m.user_id = to_insert.user_id
+);
 
 -- 4. Quick sanity check — should return 6 rows with distinct roles
 SELECT u.email, m.role
