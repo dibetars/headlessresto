@@ -101,7 +101,7 @@ WHERE NOT EXISTS (
 
 -- ── 5. Reservations ───────────────────────────────────────────
 INSERT INTO public.reservations (org_id, customer_name, customer_email, customer_phone, reservation_date, reservation_time, number_of_guests, status)
-SELECT v_org_id, customer_name, customer_email, customer_phone, reservation_date, reservation_time, guests, status
+SELECT v_org_id, customer_name, customer_email, customer_phone, reservation_date, reservation_time::time, guests, status
 FROM (VALUES
   ('James Harrington', 'james.h@email.com',  '+44 7700 900001', CURRENT_DATE,     '12:30', 4, 'confirmed'),
   ('Sophia Laurent',   'sophia.l@email.com', '+44 7700 900002', CURRENT_DATE,     '13:00', 2, 'confirmed'),
