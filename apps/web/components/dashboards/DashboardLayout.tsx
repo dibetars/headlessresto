@@ -75,7 +75,8 @@ export function DashboardLayout({ children, role, userName, restaurantName, full
           <NavItem icon={<LayoutDashboard className="w-4 h-4" />} label="Dashboard" href="/dashboard" active={pathname === '/dashboard'} onClick={() => setSidebarOpen(false)} />
         </NavGroup>
 
-        {(role === 'owner' || role === 'manager' || role === 'cashier') && (
+        {/* Owner / Manager — full operations + insights */}
+        {(role === 'owner' || role === 'manager') && (
           <NavGroup label="Operations">
             {feat('pos') && <NavItem icon={<Calculator className="w-4 h-4" />} label="POS Terminal" href="/dashboard/pos" active={pathname === '/dashboard/pos'} onClick={() => setSidebarOpen(false)} />}
             {feat('kds') && <NavItem icon={<MonitorPlay className="w-4 h-4" />} label="Kitchen Display" href="/dashboard/kds" active={pathname === '/dashboard/kds'} onClick={() => setSidebarOpen(false)} />}
@@ -84,18 +85,50 @@ export function DashboardLayout({ children, role, userName, restaurantName, full
           </NavGroup>
         )}
 
-        {role === 'super_admin' && (
-          <NavGroup label="Platform">
-            <NavItem icon={<Users className="w-4 h-4" />} label="Restaurants" href="/dashboard/restaurants" active={pathname === '/dashboard/restaurants'} onClick={() => setSidebarOpen(false)} />
-            <NavItem icon={<TrendingUp className="w-4 h-4" />} label="System Stats" href="/dashboard/stats" active={pathname === '/dashboard/stats'} onClick={() => setSidebarOpen(false)} />
-          </NavGroup>
-        )}
-
         {(role === 'owner' || role === 'manager') && (
           <NavGroup label="Insights">
             {feat('analytics') && <NavItem icon={<TrendingUp className="w-4 h-4" />} label="Analytics" href="/dashboard/analytics" active={pathname === '/dashboard/analytics'} onClick={() => setSidebarOpen(false)} />}
             {feat('inventory') && <NavItem icon={<Package className="w-4 h-4" />} label="Inventory" href="/dashboard/inventory" active={pathname === '/dashboard/inventory'} onClick={() => setSidebarOpen(false)} />}
             {feat('staff') && <NavItem icon={<Users className="w-4 h-4" />} label="Staff" href="/dashboard/staff" active={pathname === '/dashboard/staff'} onClick={() => setSidebarOpen(false)} />}
+          </NavGroup>
+        )}
+
+        {/* Cashier — POS + orders only */}
+        {role === 'cashier' && (
+          <NavGroup label="Operations">
+            {feat('pos') && <NavItem icon={<Calculator className="w-4 h-4" />} label="POS Terminal" href="/dashboard/pos" active={pathname === '/dashboard/pos'} onClick={() => setSidebarOpen(false)} />}
+            {feat('orders') && <NavItem icon={<ShoppingBag className="w-4 h-4" />} label="Orders" href="/dashboard/orders" active={pathname === '/dashboard/orders'} onClick={() => setSidebarOpen(false)} />}
+          </NavGroup>
+        )}
+
+        {/* Kitchen staff — KDS only */}
+        {role === 'kitchen_staff' && (
+          <NavGroup label="Kitchen">
+            {feat('kds') && <NavItem icon={<MonitorPlay className="w-4 h-4" />} label="Kitchen Display" href="/dashboard/kds" active={pathname === '/dashboard/kds'} onClick={() => setSidebarOpen(false)} />}
+          </NavGroup>
+        )}
+
+        {/* Wait staff — orders, reservations, tables */}
+        {role === 'wait_staff' && (
+          <NavGroup label="Service">
+            {feat('orders') && <NavItem icon={<ShoppingBag className="w-4 h-4" />} label="Orders" href="/dashboard/orders" active={pathname === '/dashboard/orders'} onClick={() => setSidebarOpen(false)} />}
+            {feat('reservations') && <NavItem icon={<Clock className="w-4 h-4" />} label="Reservations" href="/dashboard/reservations" active={pathname === '/dashboard/reservations'} onClick={() => setSidebarOpen(false)} />}
+            {feat('tables') && <NavItem icon={<LayoutGrid className="w-4 h-4" />} label="Tables" href="/dashboard/tables" active={pathname === '/dashboard/tables'} onClick={() => setSidebarOpen(false)} />}
+          </NavGroup>
+        )}
+
+        {/* Delivery driver — orders only */}
+        {role === 'delivery_driver' && (
+          <NavGroup label="Deliveries">
+            {feat('orders') && <NavItem icon={<ShoppingBag className="w-4 h-4" />} label="Orders" href="/dashboard/orders" active={pathname === '/dashboard/orders'} onClick={() => setSidebarOpen(false)} />}
+          </NavGroup>
+        )}
+
+        {/* Super admin — platform management */}
+        {role === 'super_admin' && (
+          <NavGroup label="Platform">
+            <NavItem icon={<Users className="w-4 h-4" />} label="Restaurants" href="/dashboard/restaurants" active={pathname === '/dashboard/restaurants'} onClick={() => setSidebarOpen(false)} />
+            <NavItem icon={<TrendingUp className="w-4 h-4" />} label="System Stats" href="/dashboard/stats" active={pathname === '/dashboard/stats'} onClick={() => setSidebarOpen(false)} />
           </NavGroup>
         )}
 
