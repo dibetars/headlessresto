@@ -8,12 +8,21 @@
 -- ── Resolve org ──────────────────────────────────────────────
 DO $$
 DECLARE
-  v_org_id uuid;
+  v_org_id    uuid;
+  v_loc_id    uuid;
 BEGIN
 
 SELECT id INTO v_org_id FROM public.organizations WHERE slug = 'test-restaurant';
 IF v_org_id IS NULL THEN
   RAISE EXCEPTION 'org not found — run seed-test-users.sql first';
+END IF;
+
+-- ── 0. Ensure a location exists for this org ──────────────────
+SELECT id INTO v_loc_id FROM public.locations WHERE org_id = v_org_id LIMIT 1;
+IF v_loc_id IS NULL THEN
+  INSERT INTO public.locations (org_id, name, address, city, state, zip, timezone, is_active)
+  VALUES (v_org_id, 'Main Location', '1 High Street', 'London', 'England', 'EC1A 1BB', 'Europe/London', true)
+  RETURNING id INTO v_loc_id;
 END IF;
 
 -- ── 1. Menu items (no org FK — global table) ──────────────────
@@ -119,8 +128,8 @@ WHERE NOT EXISTS (
 );
 
 -- ── 6. Stock items ────────────────────────────────────────────
-INSERT INTO public.stock_items (org_id, name, quantity, unit, category, reorder_threshold, cost_per_unit_cents)
-SELECT v_org_id, name, quantity, unit, category, reorder_threshold, cost_per_unit_cents
+INSERT INTO public.stock_items (org_id, location_id, name, quantity, unit, category, reorder_threshold, cost_per_unit_cents)
+SELECT v_org_id, v_loc_id, name, quantity, unit, category, reorder_threshold, cost_per_unit_cents
 FROM (VALUES
   ('Beef Short Rib',     24,  'kg',      'Protein',   5,  2500),
   ('Atlantic Salmon',    18,  'kg',      'Protein',   4,  1800),
