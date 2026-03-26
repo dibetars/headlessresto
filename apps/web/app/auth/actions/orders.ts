@@ -60,13 +60,14 @@ export async function placeOrderAction(
   existingOrderId?: string
 ) {
   await requireAuth()
+  const orgId = await getCurrentUserOrgId()
   const adminSupabase = createAdminClient()
   let orderId = existingOrderId
 
   if (!orderId) {
     const { data: order, error } = await adminSupabase
       .from('orders')
-      .insert({ status: 'pending', total, table_id: tableId, type: 'dine_in' })
+      .insert({ status: 'pending', total, table_id: tableId, type: 'dine_in', org_id: orgId })
       .select()
       .single()
     if (error) throw error
@@ -96,6 +97,7 @@ export async function checkoutOrderAction(
   existingOrderId?: string
 ) {
   await requireAuth()
+  const orgId = await getCurrentUserOrgId()
   const adminSupabase = createAdminClient()
   let orderId = existingOrderId
 
@@ -109,6 +111,7 @@ export async function checkoutOrderAction(
         payment_status: 'paid',
         payment_method: paymentMethod,
         type: 'dine_in',
+        org_id: orgId,
       })
       .select()
       .single()

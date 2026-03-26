@@ -2,7 +2,7 @@
 -- seed-demo-data.sql
 -- Run AFTER seed-test-users.sql.
 -- Populates the test-restaurant org with realistic demo data:
---   menu_items, tables, orders, order_items, reservations, inventory
+--   menu_items, tables, orders, order_items, reservations, stock_items
 -- All inserts are idempotent (WHERE NOT EXISTS / ON CONFLICT).
 -- =============================================================
 
@@ -11,6 +11,8 @@ DO $$
 DECLARE
   v_org_id   uuid;
   v_owner_id uuid;
+  v_order_ids uuid[];
+  v_menu_ids  uuid[];
 BEGIN
 
 SELECT id INTO v_org_id FROM public.organizations WHERE slug = 'test-restaurant';
@@ -21,7 +23,8 @@ END IF;
 SELECT id INTO v_owner_id FROM auth.users WHERE email = 'owner@test.headlessresto.com';
 
 -- ── 1. Menu items ─────────────────────────────────────────────
-INSERT INTO public.menu_items (org_id, name, description, price, category, is_available)
+-- Note: menu_items uses restaurant_id (linked to organizations.id)
+INSERT INTO public.menu_items (restaurant_id, name, description, price, category, is_available)
 SELECT v_org_id, name, description, price, category, true
 FROM (VALUES
   ('Crispy Calamari',      'Lightly battered squid with lemon aioli',          12.00, 'Starters'),
@@ -45,7 +48,7 @@ FROM (VALUES
 ) AS t(name, description, price, category)
 WHERE NOT EXISTS (
   SELECT 1 FROM public.menu_items
-  WHERE org_id = v_org_id AND name = t.name
+  WHERE restaurant_id = v_org_id AND name = t.name
 );
 
 -- ── 2. Tables ─────────────────────────────────────────────────
@@ -68,7 +71,7 @@ WHERE NOT EXISTS (
   WHERE org_id = v_org_id AND table_number = t.table_number
 );
 
--- ── 3. Orders + order_items ───────────────────────────────────
+-- ── 3. Orders ─────────────────────────────────────────────────
 -- Insert 12 sample orders spread across the last 7 days
 INSERT INTO public.orders (org_id, type, status, total, payment_method, payment_status, created_at)
 SELECT v_org_id, type, status, total, payment_method, 'paid', created_at
@@ -90,7 +93,25 @@ WHERE NOT EXISTS (
   SELECT 1 FROM public.orders WHERE org_id = v_org_id LIMIT 1
 );
 
--- ── 4. Reservations ───────────────────────────────────────────
+-- ── 4. Order items (attach to the orders we just created) ─────
+-- Link a few menu items to the most recent orders
+WITH recent_orders AS (
+  SELECT id, ROW_NUMBER() OVER (ORDER BY created_at DESC) AS rn
+  FROM public.orders WHERE org_id = v_org_id
+),
+menu AS (
+  SELECT id, ROW_NUMBER() OVER (ORDER BY name) AS rn
+  FROM public.menu_items WHERE restaurant_id = v_org_id
+)
+INSERT INTO public.order_items (order_id, menu_item_id, quantity, price)
+SELECT o.id, m.id, 2, 18.00
+FROM recent_orders o, menu m
+WHERE o.rn <= 6 AND m.rn = 1
+  AND NOT EXISTS (
+    SELECT 1 FROM public.order_items oi WHERE oi.order_id = o.id
+  );
+
+-- ── 5. Reservations ───────────────────────────────────────────
 INSERT INTO public.reservations (org_id, customer_name, customer_email, customer_phone, reservation_date, reservation_time, number_of_guests, status)
 SELECT v_org_id, customer_name, customer_email, customer_phone, reservation_date, reservation_time, guests, status
 FROM (VALUES
@@ -109,36 +130,37 @@ WHERE NOT EXISTS (
   SELECT 1 FROM public.reservations WHERE org_id = v_org_id LIMIT 1
 );
 
--- ── 5. Inventory ──────────────────────────────────────────────
-INSERT INTO public.inventory_items (org_id, name, quantity, unit, reorder_level)
-SELECT v_org_id, name, quantity, unit, reorder_level
+-- ── 6. Stock / Inventory ──────────────────────────────────────
+-- Table is stock_items with columns: name, quantity, unit, category, reorder_threshold, cost_per_unit_cents
+INSERT INTO public.stock_items (org_id, name, quantity, unit, category, reorder_threshold, cost_per_unit_cents)
+SELECT v_org_id, name, quantity, unit, category, reorder_threshold, cost_per_unit_cents
 FROM (VALUES
-  ('Beef Short Rib',     24,   'kg',      5),
-  ('Atlantic Salmon',    18,   'kg',      4),
-  ('Arborio Rice',       12,   'kg',      3),
-  ('San Marzano Tomato', 48,   'cans',    10),
-  ('Burrata',            30,   'balls',   8),
-  ('Dark Chocolate',     8,    'kg',      2),
-  ('Heavy Cream',        20,   'litres',  5),
-  ('Parmesan',           6,    'kg',      2),
-  ('Olive Oil',          15,   'litres',  3),
-  ('House Red Wine',     36,   'bottles', 12),
-  ('House White Wine',   42,   'bottles', 12),
-  ('Craft Lager',        120,  'bottles', 24),
-  ('Espresso Beans',     8,    'kg',      2),
-  ('Plain Flour',        25,   'kg',      5),
-  ('Butter',             12,   'kg',      3)
-) AS t(name, quantity, unit, reorder_level)
+  ('Beef Short Rib',     24,   'kg',      'Protein',    5,   2500),
+  ('Atlantic Salmon',    18,   'kg',      'Protein',    4,   1800),
+  ('Arborio Rice',       12,   'kg',      'Dry Goods',  3,   300),
+  ('San Marzano Tomato', 48,   'cans',    'Canned',     10,  250),
+  ('Burrata',            30,   'balls',   'Dairy',      8,   450),
+  ('Dark Chocolate',     8,    'kg',      'Baking',     2,   1200),
+  ('Heavy Cream',        20,   'litres',  'Dairy',      5,   180),
+  ('Parmesan',           6,    'kg',      'Dairy',      2,   900),
+  ('Olive Oil',          15,   'litres',  'Oils',       3,   600),
+  ('House Red Wine',     36,   'bottles', 'Beverages',  12,  800),
+  ('House White Wine',   42,   'bottles', 'Beverages',  12,  700),
+  ('Craft Lager',        120,  'bottles', 'Beverages',  24,  150),
+  ('Espresso Beans',     8,    'kg',      'Beverages',  2,   1400),
+  ('Plain Flour',        25,   'kg',      'Dry Goods',  5,   80),
+  ('Butter',             12,   'kg',      'Dairy',      3,   600)
+) AS t(name, quantity, unit, category, reorder_threshold, cost_per_unit_cents)
 WHERE NOT EXISTS (
-  SELECT 1 FROM public.inventory_items WHERE org_id = v_org_id LIMIT 1
+  SELECT 1 FROM public.stock_items WHERE org_id = v_org_id LIMIT 1
 );
 
 END $$;
 
 -- ── Sanity check ──────────────────────────────────────────────
 SELECT
-  (SELECT COUNT(*) FROM public.menu_items     WHERE org_id = (SELECT id FROM public.organizations WHERE slug='test-restaurant')) AS menu_items,
+  (SELECT COUNT(*) FROM public.menu_items     WHERE restaurant_id = (SELECT id FROM public.organizations WHERE slug='test-restaurant')) AS menu_items,
   (SELECT COUNT(*) FROM public.tables         WHERE org_id = (SELECT id FROM public.organizations WHERE slug='test-restaurant')) AS tables,
   (SELECT COUNT(*) FROM public.orders         WHERE org_id = (SELECT id FROM public.organizations WHERE slug='test-restaurant')) AS orders,
   (SELECT COUNT(*) FROM public.reservations   WHERE org_id = (SELECT id FROM public.organizations WHERE slug='test-restaurant')) AS reservations,
-  (SELECT COUNT(*) FROM public.inventory_items WHERE org_id = (SELECT id FROM public.organizations WHERE slug='test-restaurant')) AS inventory;
+  (SELECT COUNT(*) FROM public.stock_items    WHERE org_id = (SELECT id FROM public.organizations WHERE slug='test-restaurant')) AS stock_items;
