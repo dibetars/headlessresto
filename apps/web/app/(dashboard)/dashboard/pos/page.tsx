@@ -64,12 +64,17 @@ export default function POSPage() {
   const [isPaymentSheetOpen, setIsPaymentSheetOpen] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
-  
+  const [toast, setToast] = useState<{ message: string; ok: boolean } | null>(null)
+
   const supabase = createClient()
 
+  const showToast = (message: string, ok: boolean) => {
+    setToast({ message, ok })
+    setTimeout(() => setToast(null), 3000)
+  }
+
   useEffect(() => {
-    fetchInitialData()
-    fetchTables()
+    Promise.all([fetchInitialData(), fetchTables()])
   }, [])
 
   useEffect(() => {
@@ -183,7 +188,7 @@ export default function POSPage() {
   const placeOrder = async () => {
     if (!cart.length) return
     if (!selectedTable) {
-      alert('Please select a table first.')
+      showToast('Please select a table first.', false)
       setIsTableSheetOpen(true)
       return
     }
@@ -194,9 +199,9 @@ export default function POSPage() {
       await placeOrderAction(selectedTable, cartItems, total, activeOrder?.id)
       setCart([])
       fetchActiveOrder(selectedTable)
-      alert('Order sent to kitchen!')
+      showToast('Order sent to kitchen!', true)
     } catch (error: any) {
-      alert('Error placing order: ' + error.message)
+      showToast('Error placing order: ' + error.message, false)
     } finally {
       setIsProcessing(false)
     }
@@ -205,7 +210,7 @@ export default function POSPage() {
   const handleCheckout = async () => {
     if (!paymentMethod) return
     if (!selectedTable && cart.length > 0) {
-      alert('Please select a table first.')
+      showToast('Please select a table first.', false)
       setIsTableSheetOpen(true)
       return
     }
@@ -220,9 +225,9 @@ export default function POSPage() {
       setPaymentMethod(null)
       setIsPaymentSheetOpen(false)
       setSelectedTable(null)
-      alert('Payment successful! Ticket closed.')
+      showToast('Payment successful! Ticket closed.', true)
     } catch (error: any) {
-      alert('Error during checkout: ' + error.message)
+      showToast('Error during checkout: ' + error.message, false)
     } finally {
       setIsProcessing(false)
     }
@@ -509,6 +514,23 @@ export default function POSPage() {
           </SheetFooter>
         </SheetContent>
       </Sheet>
+
+      {/* Toast notification */}
+      {toast && (
+        <div className={cn(
+          'fixed bottom-6 right-6 z-50 flex items-center gap-3 px-5 py-4 rounded-2xl shadow-2xl font-bold text-sm animate-in slide-in-from-bottom-4 duration-300',
+          toast.ok
+            ? 'bg-emerald-500 text-white'
+            : 'bg-red-500 text-white'
+        )}>
+          {toast.ok ? (
+            <CheckCircle2 className="w-4 h-4 shrink-0" />
+          ) : (
+            <X className="w-4 h-4 shrink-0" />
+          )}
+          {toast.message}
+        </div>
+      )}
 
       {/* Payment Sheet */}
       <Sheet open={isPaymentSheetOpen} onOpenChange={setIsPaymentSheetOpen}>

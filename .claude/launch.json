@@ -4,7 +4,7 @@
     {
       "name": "web",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "@restaurantos/web", "dev"],
+      "runtimeArgs": ["--filter", "web", "dev"],
       "port": 3000
     },
     {
@@ -24,6 +24,12 @@
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["dev"],
       "port": 3000
+    }
+  ,{
+      "name": "dj-mixer",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "/Users/dibelaba/Documents/GitHub/Claude/dj-mixer", "run", "dev", "--", "--port", "3002"],
+      "port": 3002
     }
   ]
 }

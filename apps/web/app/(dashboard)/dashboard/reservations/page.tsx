@@ -52,7 +52,9 @@ interface Reservation {
 export default function ReservationsPage() {
   const [reservations, setReservations] = useState<Reservation[]>([])
   const [loading, setLoading] = useState(true)
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [loadingId, setLoadingId] = useState<string | null>(null)
+  const [isCreating, setIsCreating] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [isAddSheetOpen, setIsAddSheetOpen] = useState(false)
   const [statusFilter, setStatusFilter] = useState<'all' | 'confirmed' | 'pending' | 'cancelled'>('all')
@@ -84,22 +86,33 @@ export default function ReservationsPage() {
     }
   }
 
+  const showError = (msg: string) => {
+    setError(msg)
+    setTimeout(() => setError(null), 4000)
+  }
+
   const handleUpdateStatus = async (id: string, status: string) => {
+    // Optimistic update
+    setReservations(prev =>
+      prev.map(r => r.id === id ? { ...r, status } : r)
+    )
+    setLoadingId(id)
     try {
-      setIsSubmitting(true)
       await updateReservationStatusAction(id, status)
       fetchReservations()
     } catch (error: any) {
-      alert('Error updating reservation: ' + error.message)
+      // Revert on error
+      fetchReservations()
+      showError('Error updating reservation: ' + error.message)
     } finally {
-      setIsSubmitting(false)
+      setLoadingId(null)
     }
   }
 
   const handleCreateReservation = async () => {
     try {
       if (!newReservation.customer_name || !newReservation.reservation_date) return
-      setIsSubmitting(true)
+      setIsCreating(true)
       await createReservationAction(newReservation)
       setIsAddSheetOpen(false)
       setNewReservation({
@@ -113,9 +126,9 @@ export default function ReservationsPage() {
       })
       fetchReservations()
     } catch (error: any) {
-      alert('Error creating reservation: ' + error.message)
+      showError('Error creating reservation: ' + error.message)
     } finally {
-      setIsSubmitting(false)
+      setIsCreating(false)
     }
   }
 
@@ -314,23 +327,31 @@ export default function ReservationsPage() {
                           {res.status === 'pending' && (
                             <Button
                               onClick={() => handleUpdateStatus(res.id, 'confirmed')}
-                              disabled={isSubmitting}
+                              disabled={loadingId === res.id}
                               size="sm"
                               className="rounded-xl bg-green-500 hover:bg-green-600 text-white font-bold px-4 h-9 gap-1.5"
                             >
-                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              {loadingId === res.id ? (
+                                <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                              ) : (
+                                <CheckCircle2 className="w-3.5 h-3.5" />
+                              )}
                               Confirm
                             </Button>
                           )}
                           {res.status !== 'cancelled' && (
                             <Button
                               onClick={() => handleUpdateStatus(res.id, 'cancelled')}
-                              disabled={isSubmitting}
+                              disabled={loadingId === res.id}
                               size="sm"
                               variant="outline"
                               className="rounded-xl border-red-100 text-red-500 hover:bg-red-50 hover:border-red-300 font-bold px-4 h-9 gap-1.5"
                             >
-                              <AlertCircle className="w-3.5 h-3.5" />
+                              {loadingId === res.id ? (
+                                <span className="w-3.5 h-3.5 border-2 border-red-300/30 border-t-red-500 rounded-full animate-spin" />
+                              ) : (
+                                <AlertCircle className="w-3.5 h-3.5" />
+                              )}
                               Cancel
                             </Button>
                           )}
@@ -344,6 +365,14 @@ export default function ReservationsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Inline error message */}
+      {error && (
+        <div className="flex items-center gap-3 px-6 py-4 bg-red-50 border border-red-200 rounded-2xl text-red-700 font-bold text-sm">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          {error}
+        </div>
+      )}
 
       {/* Add Reservation Sheet */}
       <Sheet open={isAddSheetOpen} onOpenChange={setIsAddSheetOpen}>
@@ -415,12 +444,12 @@ export default function ReservationsPage() {
             </div>
           </div>
           <SheetFooter>
-            <Button 
+            <Button
               className="w-full h-16 rounded-2xl font-black text-lg shadow-lg shadow-blue-100"
               onClick={handleCreateReservation}
-              disabled={isSubmitting}
+              disabled={isCreating}
             >
-              {isSubmitting ? 'Creating...' : 'Confirm Reservation'}
+              {isCreating ? 'Creating...' : 'Confirm Reservation'}
             </Button>
           </SheetFooter>
         </SheetContent>

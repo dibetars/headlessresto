@@ -40,6 +40,7 @@ export default function KDSPage() {
   const [loading, setLoading] = useState(true)
   const [selectedStation, setSelectedStation] = useState<string>('all')
   const [tick, setTick] = useState(0)
+  const [loadingOrderId, setLoadingOrderId] = useState<string | null>(null)
   const supabase = createClient()
 
   const stations = [
@@ -109,10 +110,23 @@ export default function KDSPage() {
     else if (currentStatus === 'preparing') nextStatus = 'ready'
     else if (currentStatus === 'ready') nextStatus = 'completed'
 
+    // Optimistic update
+    setOrders(prev =>
+      prev.map(o => o.id === orderId ? { ...o, status: nextStatus } : o)
+    )
+    setLoadingOrderId(orderId)
     try {
       await updateOrderStatusAction(orderId, nextStatus)
+      // Re-fetch in background to sync server state
+      fetchOrders()
     } catch (error) {
       console.error('Error updating status:', error)
+      // Revert optimistic update on error
+      setOrders(prev =>
+        prev.map(o => o.id === orderId ? { ...o, status: currentStatus } : o)
+      )
+    } finally {
+      setLoadingOrderId(null)
     }
   }
 
@@ -317,8 +331,9 @@ export default function KDSPage() {
                 <div className="p-4 border-t border-gray-100 bg-white">
                   <button
                     onClick={() => updateOrderStatus(order.id, order.status)}
+                    disabled={loadingOrderId === order.id}
                     className={cn(
-                      'w-full py-3 rounded-2xl flex items-center justify-center gap-2 font-bold text-sm transition-all duration-200 active:scale-[0.98]',
+                      'w-full py-3 rounded-2xl flex items-center justify-center gap-2 font-bold text-sm transition-all duration-200 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed',
                       order.status === 'pending'
                         ? 'bg-brand-orange hover:bg-brand-orange/90 text-white shadow-[0_4px_12px_rgba(245,124,0,0.3)]'
                         : order.status === 'preparing'
@@ -326,7 +341,9 @@ export default function KDSPage() {
                         : 'bg-gray-900 hover:bg-gray-800 text-white shadow-[0_4px_12px_rgba(0,0,0,0.15)]'
                     )}
                   >
-                    {order.status === 'pending' ? (
+                    {loadingOrderId === order.id ? (
+                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : order.status === 'pending' ? (
                       <><Play className="w-4 h-4 fill-current" /><span>Start Prep</span></>
                     ) : order.status === 'preparing' ? (
                       <><CheckCircle2 className="w-4 h-4" /><span>Mark Ready</span></>

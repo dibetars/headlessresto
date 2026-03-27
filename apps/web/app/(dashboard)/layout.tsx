@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { usePathname } from 'next/navigation'
 import { DashboardLayout as NewDashboardLayout } from '@/components/dashboards/DashboardLayout'
 import { getUserProfile } from '@/app/auth/actions'
+import { ProfileProvider } from './profile-context'
 
 export default function DashboardLayout({
   children,
@@ -100,14 +101,16 @@ export default function DashboardLayout({
   )
 
   return (
-    <NewDashboardLayout
-      role={role}
-      userName={userName}
-      restaurantName={restaurantName}
-      fullScreen={isFullScreen}
-      enabledFeatures={enabledFeatures}
-    >
-      {children}
-    </NewDashboardLayout>
+    <ProfileProvider profile={profile}>
+      <NewDashboardLayout
+        role={role}
+        userName={userName}
+        restaurantName={restaurantName}
+        fullScreen={isFullScreen}
+        enabledFeatures={enabledFeatures}
+      >
+        {children}
+      </NewDashboardLayout>
+    </ProfileProvider>
   )
 }
