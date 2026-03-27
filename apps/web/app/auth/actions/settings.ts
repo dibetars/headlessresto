@@ -28,7 +28,7 @@ export async function saveProfileAction(data: {
 
   if (Object.keys(updates).length > 0) {
     const { error: profileError } = await supabase
-      .from('profiles')
+      .from('users')
       .upsert({ id: user.id, ...updates, updated_at: new Date().toISOString() })
 
     if (profileError) {
@@ -68,9 +68,10 @@ export async function saveRestaurantSettingsAction(data: {
   }
 
   // Look up the organisation this user belongs to
-  const { data: memberRow, error: memberError } = await supabase
-    .from('organization_members')
-    .select('organization_id')
+  const adminClient = createAdminClient()
+  const { data: memberRow, error: memberError } = await adminClient
+    .from('org_memberships')
+    .select('org_id')
     .eq('user_id', user.id)
     .maybeSingle()
 
@@ -82,10 +83,10 @@ export async function saveRestaurantSettingsAction(data: {
     return { success: false, error: 'No restaurant found for this account' }
   }
 
-  const { error: updateError } = await supabase
+  const { error: updateError } = await adminClient
     .from('organizations')
-    .update({ ...parsed.data, updated_at: new Date().toISOString() })
-    .eq('id', memberRow.organization_id)
+    .update({ name: parsed.data.name, updated_at: new Date().toISOString() })
+    .eq('id', memberRow.org_id)
 
   if (updateError) {
     return { success: false, error: updateError.message }
