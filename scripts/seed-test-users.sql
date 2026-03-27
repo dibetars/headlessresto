@@ -3,13 +3,13 @@
 -- Run this in Supabase → SQL Editor AFTER creating the six
 -- auth users via Authentication → Users.
 --
--- Prereq: create these auth users first (use any password you like):
---   superadmin@test.headlessresto.com
---   owner@test.headlessresto.com
---   manager@test.headlessresto.com
---   cashier@test.headlessresto.com
---   kitchen@test.headlessresto.com
---   waiter@test.headlessresto.com
+-- Prereq: create these auth users first (password: Password123!):
+--   owner@test.headlesresto.com
+--   manager@test.headlesresto.com
+--   kitchen@test.headlesresto.com
+--   waiter@test.headlesresto.com
+--   driver@test.headlesresto.com
+--   cashier@test.headlesresto.com
 -- =============================================================
 
 -- 0. Inspect the actual enum values (run this first if unsure)
@@ -23,12 +23,12 @@ INSERT INTO public.users (id, email, full_name)
 SELECT id, email, split_part(email, '@', 1)
 FROM auth.users
 WHERE email IN (
-  'superadmin@test.headlessresto.com',
-  'owner@test.headlessresto.com',
-  'manager@test.headlessresto.com',
-  'cashier@test.headlessresto.com',
-  'kitchen@test.headlessresto.com',
-  'waiter@test.headlessresto.com'
+  'owner@test.headlesresto.com',
+  'manager@test.headlesresto.com',
+  'kitchen@test.headlesresto.com',
+  'waiter@test.headlesresto.com',
+  'driver@test.headlesresto.com',
+  'cashier@test.headlesresto.com'
 )
 ON CONFLICT (id) DO UPDATE
   SET email     = EXCLUDED.email,
@@ -37,7 +37,7 @@ ON CONFLICT (id) DO UPDATE
 -- 2. Create a shared test organisation (idempotent)
 INSERT INTO public.organizations (name, slug, owner_user_id)
 SELECT 'Test Restaurant', 'test-restaurant',
-       (SELECT id FROM auth.users WHERE email = 'owner@test.headlessresto.com' LIMIT 1)
+       (SELECT id FROM auth.users WHERE email = 'owner@test.headlesresto.com' LIMIT 1)
 WHERE NOT EXISTS (
   SELECT 1 FROM public.organizations WHERE slug = 'test-restaurant'
 );
@@ -49,12 +49,12 @@ WITH org AS (
 ),
 accounts (email, role) AS (
   VALUES
-    ('superadmin@test.headlessresto.com', 'super_admin'::user_role),
-    ('owner@test.headlessresto.com',      'owner'::user_role),
-    ('manager@test.headlessresto.com',    'manager'::user_role),
-    ('cashier@test.headlessresto.com',    'cashier'::user_role),
-    ('kitchen@test.headlessresto.com',    'kitchen_staff'::user_role),
-    ('waiter@test.headlessresto.com',     'wait_staff'::user_role)
+    ('owner@test.headlesresto.com',   'owner'::user_role),
+    ('manager@test.headlesresto.com', 'manager'::user_role),
+    ('kitchen@test.headlesresto.com', 'kitchen_staff'::user_role),
+    ('waiter@test.headlesresto.com',  'wait_staff'::user_role),
+    ('driver@test.headlesresto.com',  'delivery_driver'::user_role),
+    ('cashier@test.headlesresto.com', 'cashier'::user_role)
 ),
 to_insert AS (
   SELECT org.org_id, u.id AS user_id, a.role
