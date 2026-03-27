@@ -4,13 +4,13 @@
 -- auth users via Authentication → Users.
 --
 -- Prereq: create these auth users first (password: Password123!):
---   superadmin@test.headlesresto.com
---   owner@test.headlesresto.com
---   manager@test.headlesresto.com
---   kitchen@test.headlesresto.com
---   waiter@test.headlesresto.com
---   driver@test.headlesresto.com
---   cashier@test.headlesresto.com
+--   superadmin@test.headlessresto.com
+--   owner@test.headlessresto.com
+--   manager@test.headlessresto.com
+--   kitchen@test.headlessresto.com
+--   waiter@test.headlessresto.com
+--   driver@test.headlessresto.com
+--   cashier@test.headlessresto.com
 -- =============================================================
 
 -- 0. Inspect the actual enum values (run this first if unsure)
@@ -23,24 +23,24 @@
 INSERT INTO public.users (id, email, full_name)
 SELECT id, email,
   CASE email
-    WHEN 'superadmin@test.headlesresto.com' THEN 'Super Admin'
-    WHEN 'owner@test.headlesresto.com'      THEN 'Alex Owner'
-    WHEN 'manager@test.headlesresto.com'    THEN 'Jamie Manager'
-    WHEN 'kitchen@test.headlesresto.com'    THEN 'Sam Kitchen'
-    WHEN 'waiter@test.headlesresto.com'     THEN 'Taylor Waiter'
-    WHEN 'driver@test.headlesresto.com'     THEN 'Jordan Driver'
-    WHEN 'cashier@test.headlesresto.com'    THEN 'Casey Cashier'
+    WHEN 'superadmin@test.headlessresto.com' THEN 'Super Admin'
+    WHEN 'owner@test.headlessresto.com'      THEN 'Alex Owner'
+    WHEN 'manager@test.headlessresto.com'    THEN 'Jamie Manager'
+    WHEN 'kitchen@test.headlessresto.com'    THEN 'Sam Kitchen'
+    WHEN 'waiter@test.headlessresto.com'     THEN 'Taylor Waiter'
+    WHEN 'driver@test.headlessresto.com'     THEN 'Jordan Driver'
+    WHEN 'cashier@test.headlessresto.com'    THEN 'Casey Cashier'
     ELSE split_part(email, '@', 1)
   END
 FROM auth.users
 WHERE email IN (
-  'superadmin@test.headlesresto.com',
-  'owner@test.headlesresto.com',
-  'manager@test.headlesresto.com',
-  'kitchen@test.headlesresto.com',
-  'waiter@test.headlesresto.com',
-  'driver@test.headlesresto.com',
-  'cashier@test.headlesresto.com'
+  'superadmin@test.headlessresto.com',
+  'owner@test.headlessresto.com',
+  'manager@test.headlessresto.com',
+  'kitchen@test.headlessresto.com',
+  'waiter@test.headlessresto.com',
+  'driver@test.headlessresto.com',
+  'cashier@test.headlessresto.com'
 )
 ON CONFLICT (id) DO UPDATE
   SET email     = EXCLUDED.email,
@@ -49,7 +49,7 @@ ON CONFLICT (id) DO UPDATE
 -- 2. Create a shared test organisation (idempotent)
 INSERT INTO public.organizations (name, slug, owner_user_id)
 SELECT 'Test Restaurant', 'test-restaurant',
-       (SELECT id FROM auth.users WHERE email = 'owner@test.headlesresto.com' LIMIT 1)
+       (SELECT id FROM auth.users WHERE email = 'owner@test.headlessresto.com' LIMIT 1)
 WHERE NOT EXISTS (
   SELECT 1 FROM public.organizations WHERE slug = 'test-restaurant'
 );
@@ -61,13 +61,13 @@ WITH org AS (
 ),
 accounts (email, role) AS (
   VALUES
-    ('owner@test.headlesresto.com',      'owner'::user_role),
-    ('manager@test.headlesresto.com',    'manager'::user_role),
-    ('kitchen@test.headlesresto.com',    'kitchen_staff'::user_role),
-    ('waiter@test.headlesresto.com',     'wait_staff'::user_role),
-    ('driver@test.headlesresto.com',     'delivery_driver'::user_role),
-    ('cashier@test.headlesresto.com',    'cashier'::user_role),
-    ('superadmin@test.headlesresto.com', 'super_admin'::user_role)
+    ('owner@test.headlessresto.com',      'owner'::user_role),
+    ('manager@test.headlessresto.com',    'manager'::user_role),
+    ('kitchen@test.headlessresto.com',    'kitchen_staff'::user_role),
+    ('waiter@test.headlessresto.com',     'wait_staff'::user_role),
+    ('driver@test.headlessresto.com',     'delivery_driver'::user_role),
+    ('cashier@test.headlessresto.com',    'cashier'::user_role),
+    ('superadmin@test.headlessresto.com', 'super_admin'::user_role)
 ),
 to_insert AS (
   SELECT org.org_id, u.id AS user_id, a.role
