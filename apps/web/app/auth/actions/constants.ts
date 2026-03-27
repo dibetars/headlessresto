@@ -1,1 +1,1 @@
-export const ADMIN_ROLES = ['owner', 'admin', 'manager', 'restaurant_admin', 'super_admin']
+export const ADMIN_ROLES = ['owner', 'manager', 'super_admin']

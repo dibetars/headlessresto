@@ -58,9 +58,15 @@ export async function adjustStockAction(
     .update({ quantity: newQuantity })
     .eq('id', id)
   if (updateError) throw updateError
-  // Log movement if table exists (silently skip if not)
+  // Log movement — look up the item's location_id first
+  const { data: stockItem } = await adminSupabase
+    .from('stock_items')
+    .select('location_id')
+    .eq('id', id)
+    .single()
   await adminSupabase.from('stock_movements').insert({
     stock_item_id: id,
+    location_id: stockItem?.location_id ?? null,
     quantity_change: quantityChange,
     reason,
   }).then(() => {})

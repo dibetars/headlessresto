@@ -11,7 +11,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { StatCard, PopularItem } from './DashboardComponents'
-import { getDashboardStats } from '@/app/auth/actions'
+import { getDashboardStats, getReservations } from '@/app/auth/actions'
 
 interface DashboardStats {
   totalRevenue: number
@@ -20,6 +20,7 @@ interface DashboardStats {
   avgOrderValue: number
   popularItems: { name: string; sales: number; price: number; color: string }[]
   dailyRevenue: { day: string; amount: number; percentage: number }[]
+  upcomingReservations: { name: string; time: string; guests: number }[]
 }
 
 // ─── Hero Card ────────────────────────────────────────────────────────────────
@@ -116,32 +117,31 @@ function MiniCalendar() {
 }
 
 // ─── Upcoming Reservations Card ────────────────────────────────────────────────
-function UpcomingCard({ items }: { items: { title: string; time: string; guests: number }[] }) {
-  const defaults = items.length > 0 ? items : [
-    { title: 'Business Lunch', time: '12:30 PM', guests: 4 },
-    { title: 'Birthday Dinner', time: '07:15 PM', guests: 6 },
-  ]
-
+function UpcomingCard({ items }: { items: { name: string; time: string; guests: number }[] }) {
   return (
     <div className="bg-white rounded-3xl p-5 shadow-[0_2px_12px_rgba(0,0,0,0.06)] border border-black/[0.04] flex flex-col gap-3">
       <div className="flex items-center justify-between">
         <div className="text-sm font-bold text-gray-800 normal-case not-italic font-work-sans">Upcoming</div>
-        <button className="text-xs text-brand-orange font-semibold hover:underline">View all</button>
+        <a href="/dashboard/reservations" className="text-xs text-brand-orange font-semibold hover:underline">View all</a>
       </div>
-      {defaults.map((item, i) => (
-        <div key={i} className="flex items-start justify-between gap-3 p-3 rounded-2xl bg-gray-50 hover:bg-orange-50/50 transition-colors cursor-pointer group">
-          <div>
-            <p className="text-sm font-semibold text-gray-800 group-hover:text-brand-orange transition-colors">{item.title}</p>
-            <p className="text-xs text-gray-400 mt-0.5">{item.guests} guests</p>
+      {items.length === 0 ? (
+        <p className="text-xs text-gray-400 text-center py-4 font-medium">No upcoming reservations today</p>
+      ) : (
+        items.map((item, i) => (
+          <div key={i} className="flex items-start justify-between gap-3 p-3 rounded-2xl bg-gray-50 hover:bg-orange-50/50 transition-colors cursor-pointer group">
+            <div>
+              <p className="text-sm font-semibold text-gray-800 group-hover:text-brand-orange transition-colors">{item.name}</p>
+              <p className="text-xs text-gray-400 mt-0.5">{item.guests} guests</p>
+            </div>
+            <span className="text-xs font-medium text-gray-500 bg-white px-2 py-1 rounded-lg border border-black/[0.05] shrink-0">
+              {item.time}
+            </span>
           </div>
-          <span className="text-xs font-medium text-gray-500 bg-white px-2 py-1 rounded-lg border border-black/[0.05] shrink-0">
-            {item.time}
-          </span>
-        </div>
-      ))}
-      <button className="w-full text-center text-xs font-semibold text-brand-orange py-2 rounded-xl border border-brand-orange/20 hover:bg-brand-orange/5 transition-colors">
+        ))
+      )}
+      <a href="/dashboard/reservations" className="w-full text-center text-xs font-semibold text-brand-orange py-2 rounded-xl border border-brand-orange/20 hover:bg-brand-orange/5 transition-colors block">
         + Add Reservation
-      </button>
+      </a>
     </div>
   )
 }
@@ -227,7 +227,8 @@ export function RestaurantAdminDashboard() {
     activeTables: 0,
     avgOrderValue: 0,
     popularItems: [],
-    dailyRevenue: []
+    dailyRevenue: [],
+    upcomingReservations: []
   })
   const [loading, setLoading] = useState(true)
 
@@ -237,7 +238,21 @@ export function RestaurantAdminDashboard() {
 
   const fetchDashboardData = async () => {
     try {
-      const orders = await getDashboardStats()
+      const [orders, allReservations] = await Promise.all([
+        getDashboardStats(),
+        getReservations(),
+      ])
+
+      const today = new Date().toISOString().split('T')[0]
+      const upcomingReservations = (allReservations as any[])
+        .filter(r => r.reservation_date === today && r.status !== 'cancelled')
+        .sort((a, b) => a.reservation_time.localeCompare(b.reservation_time))
+        .slice(0, 4)
+        .map(r => ({
+          name: r.customer_name,
+          time: r.reservation_time.slice(0, 5),
+          guests: r.number_of_guests,
+        }))
 
       if (orders) {
         const revenue = orders.reduce((sum, o) => sum + (o.total || 0), 0)
@@ -279,7 +294,8 @@ export function RestaurantAdminDashboard() {
           activeTables: active,
           avgOrderValue: orders.length > 0 ? revenue / orders.length : 0,
           popularItems,
-          dailyRevenue
+          dailyRevenue,
+          upcomingReservations,
         })
       }
     } catch (error) {
@@ -345,7 +361,7 @@ export function RestaurantAdminDashboard() {
         <HeroCard />
         <div className="flex flex-col gap-4">
           <MiniCalendar />
-          <UpcomingCard items={[]} />
+          <UpcomingCard items={stats.upcomingReservations} />
         </div>
       </div>
 
