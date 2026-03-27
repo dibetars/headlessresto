@@ -26,7 +26,21 @@ export async function addInventoryItemAction(item: {
   await assertAdminRole()
   const orgId = await getCurrentUserOrgId()
   const adminSupabase = createAdminClient()
-  const { error } = await adminSupabase.from('stock_items').insert({ ...item, org_id: orgId })
+
+  // stock_items requires a location_id (NOT NULL) — resolve the org's first location
+  const { data: loc } = await adminSupabase
+    .from('locations')
+    .select('id')
+    .eq('org_id', orgId)
+    .limit(1)
+    .single()
+
+  const locationId = loc?.id ?? null
+  if (!locationId) throw new Error('No location found for this organisation. Create a location first.')
+
+  const { error } = await adminSupabase
+    .from('stock_items')
+    .insert({ ...item, org_id: orgId, location_id: locationId })
   if (error) throw error
 }
 
@@ -44,9 +58,15 @@ export async function adjustStockAction(
     .update({ quantity: newQuantity })
     .eq('id', id)
   if (updateError) throw updateError
-  // Log movement if table exists (silently skip if not)
+  // Log movement — look up the item's location_id first
+  const { data: stockItem } = await adminSupabase
+    .from('stock_items')
+    .select('location_id')
+    .eq('id', id)
+    .single()
   await adminSupabase.from('stock_movements').insert({
     stock_item_id: id,
+    location_id: stockItem?.location_id ?? null,
     quantity_change: quantityChange,
     reason,
   }).then(() => {})

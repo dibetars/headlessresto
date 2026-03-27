@@ -42,7 +42,6 @@ interface MenuItem {
   category: string
   image_url?: string
   description?: string
-  restaurant_id: string
 }
 
 export default function DashboardMenuPage() {
@@ -70,20 +69,9 @@ export default function DashboardMenuPage() {
   const fetchMenu = async () => {
     try {
       setLoading(true)
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-
-      // Get restaurant_id from user profile or membership
-      const { data: profile } = await supabase
-        .from('users')
-        .select('restaurant_id')
-        .eq('id', user.id)
-        .single()
-
       const { data, error } = await supabase
         .from('menu_items')
         .select('*')
-        .eq('restaurant_id', profile?.restaurant_id)
         .order('category', { ascending: true })
 
       if (error) throw error
@@ -99,20 +87,10 @@ export default function DashboardMenuPage() {
     try {
       if (!newItem.name || newItem.price <= 0) return
       setIsSubmitting(true)
-      
-      const { data: { user } } = await supabase.auth.getUser()
-      const { data: profile } = await supabase
-        .from('users')
-        .select('restaurant_id')
-        .eq('id', user?.id)
-        .single()
 
       const { error } = await supabase
         .from('menu_items')
-        .insert([{
-          ...newItem,
-          restaurant_id: profile?.restaurant_id
-        }])
+        .insert([newItem])
 
       if (error) throw error
       

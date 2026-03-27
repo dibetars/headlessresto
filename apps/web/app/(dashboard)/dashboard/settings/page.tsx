@@ -1,9 +1,9 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { User, Building2, Bell, Shield, CreditCard, ChevronRight, Truck, CheckCircle2, Loader2, Copy } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { createDeliveryQuoteAction } from '@/app/auth/actions'
+import { createDeliveryQuoteAction, getUserProfile } from '@/app/auth/actions'
 import {
   saveProfileAction,
   saveRestaurantSettingsAction,
@@ -210,6 +210,8 @@ export default function SettingsPage() {
   // Profile section state
   const [profileName, setProfileName] = useState('')
   const [profileEmail, setProfileEmail] = useState('')
+  const [profilePhone, setProfilePhone] = useState('')
+  const [profileRole, setProfileRole] = useState('')
   const [profileSaving, setProfileSaving] = useState(false)
   const [profileMessage, setProfileMessage] = useState<{ ok: boolean; text: string } | null>(null)
 
@@ -217,6 +219,18 @@ export default function SettingsPage() {
   const [restaurantName, setRestaurantName] = useState('')
   const [restaurantSaving, setRestaurantSaving] = useState(false)
   const [restaurantMessage, setRestaurantMessage] = useState<{ ok: boolean; text: string } | null>(null)
+
+  // Load user profile on mount
+  useEffect(() => {
+    getUserProfile().then(profile => {
+      if (!profile) return
+      setProfileName(profile.full_name || '')
+      setProfileEmail(profile.email || '')
+      setProfilePhone(profile.phone || '')
+      setProfileRole(profile.role || '')
+      setRestaurantName(profile.organization?.name || '')
+    })
+  }, [])
 
   // Notifications section state
   const [notifState, setNotifState] = useState<Record<string, boolean>>({
@@ -315,12 +329,22 @@ export default function SettingsPage() {
                     className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-brand-orange/20 focus:border-brand-orange/30 transition-all placeholder:text-gray-400"
                   />
                 </div>
-                {[['Phone', '+1 (555) 000-0000'], ['Role', 'Admin']].map(([label, placeholder]) => (
-                  <div key={label}>
-                    <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">{label}</label>
-                    <input type="text" placeholder={placeholder} className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-brand-orange/20 focus:border-brand-orange/30 transition-all placeholder:text-gray-400" />
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Phone</label>
+                  <input
+                    type="text"
+                    value={profilePhone}
+                    onChange={e => setProfilePhone(e.target.value)}
+                    placeholder="+1 (555) 000-0000"
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-brand-orange/20 focus:border-brand-orange/30 transition-all placeholder:text-gray-400"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Role</label>
+                  <div className="w-full px-4 py-2.5 bg-gray-100 border border-gray-200 rounded-2xl text-sm text-gray-500 cursor-default capitalize">
+                    {profileRole ? profileRole.replace(/_/g, ' ') : '—'}
                   </div>
-                ))}
+                </div>
               </div>
               {profileMessage && (
                 <p className={cn('text-xs font-medium', profileMessage.ok ? 'text-emerald-600' : 'text-rose-600')}>

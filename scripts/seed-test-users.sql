@@ -1,15 +1,16 @@
 -- =============================================================
 -- seed-test-users.sql
--- Run this in Supabase → SQL Editor AFTER creating the six
+-- Run this in Supabase → SQL Editor AFTER creating the seven
 -- auth users via Authentication → Users.
 --
--- Prereq: create these auth users first (use any password you like):
---   superadmin@test.headlessresto.com
---   owner@test.headlessresto.com
---   manager@test.headlessresto.com
---   cashier@test.headlessresto.com
---   kitchen@test.headlessresto.com
---   waiter@test.headlessresto.com
+-- Prereq: create these auth users first (password: Password123!):
+--   superadmin@test.headlesresto.com
+--   owner@test.headlesresto.com
+--   manager@test.headlesresto.com
+--   kitchen@test.headlesresto.com
+--   waiter@test.headlesresto.com
+--   driver@test.headlesresto.com
+--   cashier@test.headlesresto.com
 -- =============================================================
 
 -- 0. Inspect the actual enum values (run this first if unsure)
@@ -20,15 +21,26 @@
 
 -- 1. Upsert rows in the `users` profile table
 INSERT INTO public.users (id, email, full_name)
-SELECT id, email, split_part(email, '@', 1)
+SELECT id, email,
+  CASE email
+    WHEN 'superadmin@test.headlesresto.com' THEN 'Super Admin'
+    WHEN 'owner@test.headlesresto.com'      THEN 'Alex Owner'
+    WHEN 'manager@test.headlesresto.com'    THEN 'Jamie Manager'
+    WHEN 'kitchen@test.headlesresto.com'    THEN 'Sam Kitchen'
+    WHEN 'waiter@test.headlesresto.com'     THEN 'Taylor Waiter'
+    WHEN 'driver@test.headlesresto.com'     THEN 'Jordan Driver'
+    WHEN 'cashier@test.headlesresto.com'    THEN 'Casey Cashier'
+    ELSE split_part(email, '@', 1)
+  END
 FROM auth.users
 WHERE email IN (
-  'superadmin@test.headlessresto.com',
-  'owner@test.headlessresto.com',
-  'manager@test.headlessresto.com',
-  'cashier@test.headlessresto.com',
-  'kitchen@test.headlessresto.com',
-  'waiter@test.headlessresto.com'
+  'superadmin@test.headlesresto.com',
+  'owner@test.headlesresto.com',
+  'manager@test.headlesresto.com',
+  'kitchen@test.headlesresto.com',
+  'waiter@test.headlesresto.com',
+  'driver@test.headlesresto.com',
+  'cashier@test.headlesresto.com'
 )
 ON CONFLICT (id) DO UPDATE
   SET email     = EXCLUDED.email,
@@ -37,35 +49,40 @@ ON CONFLICT (id) DO UPDATE
 -- 2. Create a shared test organisation (idempotent)
 INSERT INTO public.organizations (name, slug, owner_user_id)
 SELECT 'Test Restaurant', 'test-restaurant',
-       (SELECT id FROM auth.users WHERE email = 'owner@test.headlessresto.com' LIMIT 1)
+       (SELECT id FROM auth.users WHERE email = 'owner@test.headlesresto.com' LIMIT 1)
 WHERE NOT EXISTS (
   SELECT 1 FROM public.organizations WHERE slug = 'test-restaurant'
 );
 
 -- 3. Wire each user into org_memberships with their correct role.
---    super_admin uses 'restaurant_admin' — the highest value in the enum.
---    The app code treats both identically in the dashboard switch.
+--    Uses DELETE + INSERT so it works even without a unique constraint.
 WITH org AS (
   SELECT id AS org_id FROM public.organizations WHERE slug = 'test-restaurant'
 ),
 accounts (email, role) AS (
   VALUES
-    ('superadmin@test.headlessresto.com', 'super_admin'::user_role),
-    ('owner@test.headlessresto.com',      'owner'::user_role),
-    ('manager@test.headlessresto.com',    'manager'::user_role),
-    ('cashier@test.headlessresto.com',    'cashier'::user_role),
-    ('kitchen@test.headlessresto.com',    'kitchen_staff'::user_role),
-    ('waiter@test.headlessresto.com',     'wait_staff'::user_role)
+    ('owner@test.headlesresto.com',      'owner'::user_role),
+    ('manager@test.headlesresto.com',    'manager'::user_role),
+    ('kitchen@test.headlesresto.com',    'kitchen_staff'::user_role),
+    ('waiter@test.headlesresto.com',     'wait_staff'::user_role),
+    ('driver@test.headlesresto.com',     'delivery_driver'::user_role),
+    ('cashier@test.headlesresto.com',    'cashier'::user_role),
+    ('superadmin@test.headlesresto.com', 'super_admin'::user_role)
+),
+to_insert AS (
+  SELECT org.org_id, u.id AS user_id, a.role
+  FROM accounts a
+  JOIN auth.users u ON u.email = a.email
+  CROSS JOIN org
 )
 INSERT INTO public.org_memberships (org_id, user_id, role)
-SELECT org.org_id, u.id, a.role
-FROM accounts a
-JOIN auth.users u ON u.email = a.email
-CROSS JOIN org
-ON CONFLICT (org_id, user_id) DO UPDATE
-  SET role = EXCLUDED.role;
+SELECT org_id, user_id, role FROM to_insert
+WHERE NOT EXISTS (
+  SELECT 1 FROM public.org_memberships m
+  WHERE m.org_id = to_insert.org_id AND m.user_id = to_insert.user_id
+);
 
--- 4. Quick sanity check — should return 6 rows with distinct roles
+-- 4. Quick sanity check — should return 7 rows with distinct roles
 SELECT u.email, m.role
 FROM public.org_memberships m
 JOIN auth.users u ON u.id = m.user_id

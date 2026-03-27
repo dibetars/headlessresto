@@ -32,10 +32,6 @@ export async function getUserProfile() {
     return null
   }
 
-  if (!profileData) {
-    return null
-  }
-
   const { data: memberships, error: membershipError } = await adminSupabase
     .from('org_memberships')
     .select('*')
@@ -59,10 +55,20 @@ export async function getUserProfile() {
 
   const finalRole = membershipData?.role || 'user'
 
+  // If no profile row exists yet, fall back to auth user data
+  const baseProfile = profileData ?? {
+    id: user.id,
+    email: user.email ?? '',
+    full_name: (user.user_metadata?.full_name as string) ?? '',
+    phone: user.phone ?? '',
+    avatar_url: null,
+    created_at: user.created_at,
+  }
+
   return {
-    ...profileData,
+    ...baseProfile,
     role: finalRole,
-    organization: organization
+    organization,
   }
 }
 
