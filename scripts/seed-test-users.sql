@@ -1,9 +1,10 @@
 -- =============================================================
 -- seed-test-users.sql
--- Run this in Supabase → SQL Editor AFTER creating the six
+-- Run this in Supabase → SQL Editor AFTER creating the seven
 -- auth users via Authentication → Users.
 --
 -- Prereq: create these auth users first (password: Password123!):
+--   superadmin@test.headlesresto.com
 --   owner@test.headlesresto.com
 --   manager@test.headlesresto.com
 --   kitchen@test.headlesresto.com
@@ -20,9 +21,20 @@
 
 -- 1. Upsert rows in the `users` profile table
 INSERT INTO public.users (id, email, full_name)
-SELECT id, email, split_part(email, '@', 1)
+SELECT id, email,
+  CASE email
+    WHEN 'superadmin@test.headlesresto.com' THEN 'Super Admin'
+    WHEN 'owner@test.headlesresto.com'      THEN 'Alex Owner'
+    WHEN 'manager@test.headlesresto.com'    THEN 'Jamie Manager'
+    WHEN 'kitchen@test.headlesresto.com'    THEN 'Sam Kitchen'
+    WHEN 'waiter@test.headlesresto.com'     THEN 'Taylor Waiter'
+    WHEN 'driver@test.headlesresto.com'     THEN 'Jordan Driver'
+    WHEN 'cashier@test.headlesresto.com'    THEN 'Casey Cashier'
+    ELSE split_part(email, '@', 1)
+  END
 FROM auth.users
 WHERE email IN (
+  'superadmin@test.headlesresto.com',
   'owner@test.headlesresto.com',
   'manager@test.headlesresto.com',
   'kitchen@test.headlesresto.com',
@@ -49,12 +61,13 @@ WITH org AS (
 ),
 accounts (email, role) AS (
   VALUES
-    ('owner@test.headlesresto.com',   'owner'::user_role),
-    ('manager@test.headlesresto.com', 'manager'::user_role),
-    ('kitchen@test.headlesresto.com', 'kitchen_staff'::user_role),
-    ('waiter@test.headlesresto.com',  'wait_staff'::user_role),
-    ('driver@test.headlesresto.com',  'delivery_driver'::user_role),
-    ('cashier@test.headlesresto.com', 'cashier'::user_role)
+    ('owner@test.headlesresto.com',      'owner'::user_role),
+    ('manager@test.headlesresto.com',    'manager'::user_role),
+    ('kitchen@test.headlesresto.com',    'kitchen_staff'::user_role),
+    ('waiter@test.headlesresto.com',     'wait_staff'::user_role),
+    ('driver@test.headlesresto.com',     'delivery_driver'::user_role),
+    ('cashier@test.headlesresto.com',    'cashier'::user_role),
+    ('superadmin@test.headlesresto.com', 'super_admin'::user_role)
 ),
 to_insert AS (
   SELECT org.org_id, u.id AS user_id, a.role
@@ -69,7 +82,7 @@ WHERE NOT EXISTS (
   WHERE m.org_id = to_insert.org_id AND m.user_id = to_insert.user_id
 );
 
--- 4. Quick sanity check — should return 6 rows with distinct roles
+-- 4. Quick sanity check — should return 7 rows with distinct roles
 SELECT u.email, m.role
 FROM public.org_memberships m
 JOIN auth.users u ON u.id = m.user_id

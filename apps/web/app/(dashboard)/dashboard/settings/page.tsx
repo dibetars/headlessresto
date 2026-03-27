@@ -341,12 +341,9 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Role</label>
-                  <input
-                    type="text"
-                    value={profileRole}
-                    readOnly
-                    className="w-full px-4 py-2.5 bg-gray-100 border border-gray-200 rounded-2xl text-sm text-gray-500 cursor-default"
-                  />
+                  <div className="w-full px-4 py-2.5 bg-gray-100 border border-gray-200 rounded-2xl text-sm text-gray-500 cursor-default capitalize">
+                    {profileRole ? profileRole.replace(/_/g, ' ') : '—'}
+                  </div>
                 </div>
               </div>
               {profileMessage && (
