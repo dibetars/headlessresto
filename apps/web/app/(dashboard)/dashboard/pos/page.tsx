@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { placeOrderAction, checkoutOrderAction } from '@/app/auth/actions'
+import { placeOrderAction, checkoutOrderAction, getTables } from '@/app/auth/actions'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
@@ -117,12 +117,7 @@ export default function POSPage() {
 
   const fetchTables = async () => {
     try {
-      const { data, error } = await supabase
-        .from('tables')
-        .select('*')
-        .order('table_number')
-      
-      if (error) throw error
+      const data = await getTables()
       setTables(data || [])
       if (data && data.length > 0) setSelectedTable(data[0].id)
     } catch (error) {

@@ -146,7 +146,7 @@ export async function checkoutOrderAction(
 }
 
 export async function updateOrderStatusAction(orderId: string, newStatus: string) {
-  await assertAdminRole()
+  await requireAuth()
   const adminSupabase = createAdminClient()
   const { error } = await adminSupabase
     .from('orders')

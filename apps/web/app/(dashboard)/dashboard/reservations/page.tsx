@@ -55,6 +55,8 @@ export default function ReservationsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [isAddSheetOpen, setIsAddSheetOpen] = useState(false)
+  const [statusFilter, setStatusFilter] = useState<'all' | 'confirmed' | 'pending' | 'cancelled'>('all')
+  const [dateFilter, setDateFilter] = useState('')
   
   const [newReservation, setNewReservation] = useState({
     customer_name: '',
@@ -98,10 +100,7 @@ export default function ReservationsPage() {
     try {
       if (!newReservation.customer_name || !newReservation.reservation_date) return
       setIsSubmitting(true)
-      await createReservationAction({
-        ...newReservation,
-        reservation_date: `${newReservation.reservation_date}T${newReservation.reservation_time}:00`,
-      })
+      await createReservationAction(newReservation)
       setIsAddSheetOpen(false)
       setNewReservation({
         customer_name: '',
@@ -120,11 +119,15 @@ export default function ReservationsPage() {
     }
   }
 
-  const filteredReservations = reservations.filter(res => 
-    res.customer_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    res.customer_email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    res.customer_phone.includes(searchQuery)
-  )
+  const filteredReservations = reservations.filter(res => {
+    const matchesSearch =
+      res.customer_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      res.customer_email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      res.customer_phone.includes(searchQuery)
+    const matchesStatus = statusFilter === 'all' || res.status === statusFilter
+    const matchesDate = !dateFilter || res.reservation_date.startsWith(dateFilter)
+    return matchesSearch && matchesStatus && matchesDate
+  })
 
   const upcomingReservations = reservations.filter(res => res.status === 'confirmed')
   const pendingReservations = reservations.filter(res => res.status === 'pending')
@@ -202,13 +205,40 @@ export default function ReservationsPage() {
               />
             </div>
             <div className="flex items-center gap-3">
-              <Button variant="outline" className="h-14 rounded-2xl border-slate-100 font-bold px-6 flex items-center gap-2">
+              {/* Status filter cycle */}
+              <Button
+                variant="outline"
+                onClick={() => {
+                  const cycle = { all: 'pending', pending: 'confirmed', confirmed: 'cancelled', cancelled: 'all' } as const
+                  setStatusFilter(s => cycle[s])
+                }}
+                className={`h-14 rounded-2xl border-slate-100 font-bold px-6 flex items-center gap-2 ${statusFilter !== 'all' ? 'border-blue-300 bg-blue-50 text-blue-700' : ''}`}
+              >
                 <Filter className="w-4 h-4" />
-                Filter
+                {statusFilter === 'all' ? 'Filter' : statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)}
               </Button>
-              <Button variant="outline" className="h-14 w-14 rounded-2xl border-slate-100 p-0 flex items-center justify-center">
-                <Calendar className="w-5 h-5" />
-              </Button>
+              {/* Date filter */}
+              <div className="relative">
+                <input
+                  type="date"
+                  value={dateFilter}
+                  onChange={e => setDateFilter(e.target.value)}
+                  className="h-14 w-14 rounded-2xl border border-slate-100 opacity-0 absolute inset-0 cursor-pointer"
+                />
+                <Button variant="outline" className={`h-14 w-14 rounded-2xl border-slate-100 p-0 flex items-center justify-center pointer-events-none ${dateFilter ? 'border-blue-300 bg-blue-50 text-blue-700' : ''}`}>
+                  <Calendar className="w-5 h-5" />
+                </Button>
+              </div>
+              {/* Clear filters */}
+              {(statusFilter !== 'all' || dateFilter) && (
+                <Button
+                  variant="ghost"
+                  onClick={() => { setStatusFilter('all'); setDateFilter('') }}
+                  className="h-14 rounded-2xl text-slate-400 hover:text-slate-700 font-bold text-xs px-3"
+                >
+                  Clear
+                </Button>
+              )}
             </div>
           </div>
         </CardHeader>
@@ -282,28 +312,28 @@ export default function ReservationsPage() {
                       <TableCell className="py-6 px-8 text-right">
                         <div className="flex items-center justify-end gap-2">
                           {res.status === 'pending' && (
-                            <Button 
+                            <Button
                               onClick={() => handleUpdateStatus(res.id, 'confirmed')}
                               disabled={isSubmitting}
-                              variant="ghost" 
-                              className="w-10 h-10 p-0 rounded-xl hover:bg-green-50 hover:text-green-600"
+                              size="sm"
+                              className="rounded-xl bg-green-500 hover:bg-green-600 text-white font-bold px-4 h-9 gap-1.5"
                             >
-                              <CheckCircle2 className="w-4 h-4" />
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              Confirm
                             </Button>
                           )}
                           {res.status !== 'cancelled' && (
-                            <Button 
+                            <Button
                               onClick={() => handleUpdateStatus(res.id, 'cancelled')}
                               disabled={isSubmitting}
-                              variant="ghost" 
-                              className="w-10 h-10 p-0 rounded-xl hover:bg-red-50 hover:text-red-600"
+                              size="sm"
+                              variant="outline"
+                              className="rounded-xl border-red-100 text-red-500 hover:bg-red-50 hover:border-red-300 font-bold px-4 h-9 gap-1.5"
                             >
-                              <AlertCircle className="w-4 h-4" />
+                              <AlertCircle className="w-3.5 h-3.5" />
+                              Cancel
                             </Button>
                           )}
-                          <Button variant="ghost" className="w-10 h-10 p-0 rounded-xl hover:bg-white hover:shadow-sm">
-                            <MoreVertical className="w-5 h-5 text-slate-400" />
-                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
