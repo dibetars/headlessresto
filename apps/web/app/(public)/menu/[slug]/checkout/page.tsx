@@ -1,14 +1,20 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { placePublicOrderAction } from '@/app/auth/actions/public-orders'
+import { placePublicOrderAction, getDeliveryQuoteAction } from '@/app/auth/actions/public-orders'
 
 interface CartItem {
   id: string
   name: string
   price: number
   quantity: number
+}
+
+interface Quote {
+  fee: number
+  currency: string
+  etaMinutes: number
 }
 
 export default function CheckoutPage({ params }: { params: { slug: string } }) {
@@ -19,8 +25,12 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [address, setAddress] = useState('')
+  const [quote, setQuote] = useState<Quote | null>(null)
+  const [quoteLoading, setQuoteLoading] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  const quoteTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     const stored = sessionStorage.getItem(`cart_${slug}`)
@@ -29,9 +39,26 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
     }
   }, [slug])
 
+  // Debounced quote fetch when address is filled in
+  useEffect(() => {
+    if (address.trim().length < 8) {
+      setQuote(null)
+      return
+    }
+    if (quoteTimer.current) clearTimeout(quoteTimer.current)
+    quoteTimer.current = setTimeout(async () => {
+      setQuoteLoading(true)
+      const result = await getDeliveryQuoteAction(address, slug)
+      setQuoteLoading(false)
+      if (!('error' in result)) setQuote(result)
+    }, 600)
+    return () => { if (quoteTimer.current) clearTimeout(quoteTimer.current) }
+  }, [address, slug])
+
   const subtotal = cart.reduce((s, i) => s + i.price * i.quantity, 0)
   const tax = subtotal * 0.1
-  const total = subtotal + tax
+  const deliveryFee = quote ? quote.fee / 100 : 0
+  const total = subtotal + tax + deliveryFee
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -89,11 +116,20 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#888', marginBottom: 4 }}>
             <span>Subtotal</span><span>${subtotal.toFixed(2)}</span>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#888', marginBottom: 8 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#888', marginBottom: 4 }}>
             <span>Tax (10%)</span><span>${tax.toFixed(2)}</span>
           </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 8 }}>
+            <span style={{ color: quoteLoading ? '#aaa' : '#555' }}>
+              Delivery fee {quoteLoading ? '(calculating…)' : quote ? `(~${quote.etaMinutes} min)` : '(enter address)'}
+            </span>
+            <span style={{ color: quoteLoading ? '#aaa' : '#555' }}>
+              {quoteLoading ? '…' : quote ? `$${(quote.fee / 100).toFixed(2)}` : '—'}
+            </span>
+          </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 900, fontSize: 18 }}>
-            <span>Total</span><span style={{ color: '#FF6B00' }}>${total.toFixed(2)}</span>
+            <span>Total</span>
+            <span style={{ color: '#FF6B00' }}>${total.toFixed(2)}</span>
           </div>
         </div>
       </div>
@@ -105,7 +141,7 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
         {[
           { label: 'Full Name', value: name, setter: setName, type: 'text', placeholder: 'John Smith' },
           { label: 'Phone Number', value: phone, setter: setPhone, type: 'tel', placeholder: '+1 555 0123' },
-          { label: 'Delivery Address', value: address, setter: setAddress, type: 'text', placeholder: '123 Main St, City' },
+          { label: 'Delivery Address', value: address, setter: setAddress, type: 'text', placeholder: '123 Main St, City, State' },
         ].map(({ label, value, setter, type, placeholder }) => (
           <div key={label} style={{ marginBottom: 18 }}>
             <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#555', marginBottom: 6 }}>{label}</label>
@@ -124,7 +160,6 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                 outline: 'none',
                 boxSizing: 'border-box',
                 fontFamily: 'inherit',
-                transition: 'border-color 0.15s',
               }}
             />
           </div>
@@ -145,7 +180,6 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
             fontWeight: 800,
             fontSize: 16,
             cursor: loading ? 'not-allowed' : 'pointer',
-            transition: 'background 0.2s',
             marginTop: 8,
           }}
         >
