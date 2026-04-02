@@ -3,6 +3,7 @@
 import React, { useState } from 'react'
 import { Plus, Minus, ShoppingCart, X } from 'lucide-react'
 import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 
 interface TemplateProps {
   restaurant: { name: string; slug: string; brand_assets: any }
@@ -18,6 +19,7 @@ interface CartItem {
 }
 
 export function BoldTemplate({ restaurant, menuItems, categories }: TemplateProps) {
+  const router = useRouter()
   const [selectedCategory, setSelectedCategory] = useState<string>(categories[0] ?? '')
   const [cart, setCart] = useState<CartItem[]>([])
   const [cartOpen, setCartOpen] = useState(false)
@@ -163,7 +165,10 @@ export function BoldTemplate({ restaurant, menuItems, categories }: TemplateProp
                 <span>Total</span><span style={{ color: primaryColor }}>${total.toFixed(2)}</span>
               </div>
               <button
-                onClick={() => alert('Checkout coming soon')}
+                onClick={() => {
+                  sessionStorage.setItem(`cart_${restaurant.slug}`, JSON.stringify(cart))
+                  router.push(`/menu/${restaurant.slug}/checkout`)
+                }}
                 style={{ width: '100%', padding: '16px', background: primaryColor, color: '#fff', border: 'none', borderRadius: 14, fontWeight: 800, fontSize: 16, cursor: 'pointer' }}
               >
                 Checkout

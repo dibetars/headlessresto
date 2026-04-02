@@ -3,6 +3,7 @@
 import React, { useState } from 'react'
 import { Plus, Minus, ShoppingCart, X } from 'lucide-react'
 import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 
 interface TemplateProps {
   restaurant: { name: string; slug: string; brand_assets: any }
@@ -18,6 +19,7 @@ interface CartItem {
 }
 
 export function MinimalTemplate({ restaurant, menuItems, categories }: TemplateProps) {
+  const router = useRouter()
   const [selectedCategory, setSelectedCategory] = useState<string>(categories[0] ?? '')
   const [cart, setCart] = useState<CartItem[]>([])
   const [cartOpen, setCartOpen] = useState(false)
@@ -154,7 +156,10 @@ export function MinimalTemplate({ restaurant, menuItems, categories }: TemplateP
                     <span>Total</span><span>${total.toFixed(2)}</span>
                   </div>
                   <button
-                    onClick={() => alert('Checkout coming soon')}
+                    onClick={() => {
+                      sessionStorage.setItem(`cart_${restaurant.slug}`, JSON.stringify(cart))
+                      router.push(`/menu/${restaurant.slug}/checkout`)
+                    }}
                     style={{ width: '100%', padding: '14px', background: primaryColor, color: '#fff', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: 15, cursor: 'pointer' }}
                   >
                     Checkout
