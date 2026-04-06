@@ -56,6 +56,7 @@ export function WarmTemplate({ restaurant, menuItems, categories, onCheckout }: 
   const [selectedCategory, setSelectedCategory] = useState<string>('All')
   const [cart, setCart] = useState<CartItem[]>([])
   const [cartOpen, setCartOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
 
   const primaryColor = restaurant.brand_assets?.primary_color ?? '#16a34a'
 
@@ -79,13 +80,13 @@ export function WarmTemplate({ restaurant, menuItems, categories, onCheckout }: 
   const total = subtotal + tax
   const totalQty = cart.reduce((s, i) => s + i.quantity, 0)
 
-  const filtered = selectedCategory === 'All'
+  const filtered = (selectedCategory === 'All'
     ? menuItems
     : menuItems.filter(i => i.category === selectedCategory)
+  ).filter(i => !searchQuery || i.name.toLowerCase().includes(searchQuery.toLowerCase()) || (i.description ?? '').toLowerCase().includes(searchQuery.toLowerCase()))
 
   return (
     <div style={{ background: '#f5f7f0', minHeight: '100vh', color: '#1a2e1a', fontFamily: "'Inter', 'Helvetica Neue', sans-serif" }}>
-      <style>{`.warm-nav-links{display:flex!important} @media(max-width:640px){.warm-nav-links{display:none!important}}`}</style>
 
       {/* Hero */}
       <div style={{
@@ -102,11 +103,6 @@ export function WarmTemplate({ restaurant, menuItems, categories, onCheckout }: 
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <span style={{ fontSize: 22 }}>🌿</span>
             <span style={{ color: '#fff', fontWeight: 900, fontSize: 18, letterSpacing: -0.5 }}>{restaurant.name}</span>
-          </div>
-          <div className="warm-nav-links" style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
-            {['Menu', 'About', 'Catering', 'Contact'].map(link => (
-              <span key={link} style={{ color: 'rgba(255,255,255,0.75)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>{link}</span>
-            ))}
           </div>
         </div>
 
@@ -135,17 +131,28 @@ export function WarmTemplate({ restaurant, menuItems, categories, onCheckout }: 
             From local kitchens to your door — fresh, fast, and delicious.
           </p>
 
-          {/* Search bar (decorative) */}
+          {/* Search bar */}
           <div style={{
             background: 'rgba(255,255,255,0.95)', borderRadius: 16,
-            padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 10,
+            padding: '4px 20px', display: 'flex', alignItems: 'center', gap: 10,
             maxWidth: 440, margin: '0 auto',
             boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
           }}>
-            <span style={{ fontSize: 18 }}>🔍</span>
-            <span style={{ color: '#9ca3af', fontSize: 15, fontWeight: 400 }}>
-              Search for burgers, pizza, sushi...
-            </span>
+            <span style={{ fontSize: 18, flexShrink: 0 }}>🔍</span>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Search for burgers, pizza, sushi..."
+              style={{
+                flex: 1, border: 'none', outline: 'none', background: 'transparent',
+                fontSize: 15, color: '#374151', padding: '12px 0',
+                fontFamily: 'inherit',
+              }}
+            />
+            {searchQuery && (
+              <button onClick={() => setSearchQuery('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: 18, lineHeight: 1, padding: 0 }}>×</button>
+            )}
           </div>
         </div>
       </div>
