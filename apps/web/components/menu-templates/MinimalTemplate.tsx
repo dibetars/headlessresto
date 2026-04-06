@@ -10,6 +10,7 @@ interface TemplateProps {
   menuItems: { id: string; name: string; description: string | null; price: number; category: string; image_url: string | null }[]
   categories: string[]
   onCheckout?: (cart: { id: string; name: string; price: number; quantity: number }[]) => void
+  availability?: Record<string, boolean>
 }
 
 interface CartItem {
@@ -44,7 +45,7 @@ function getItemMeta(name: string) {
   }
 }
 
-export function MinimalTemplate({ restaurant, menuItems, categories, onCheckout }: TemplateProps) {
+export function MinimalTemplate({ restaurant, menuItems, categories, onCheckout, availability }: TemplateProps) {
   const router = useRouter()
   const [selectedCategory, setSelectedCategory] = useState<string>(categories[0] ?? '')
   const [cart, setCart] = useState<CartItem[]>([])
@@ -273,6 +274,7 @@ export function MinimalTemplate({ restaurant, menuItems, categories, onCheckout 
             const meta = getItemMeta(item.name)
             const inCart = cart.find(c => c.id === item.id)
             const gradient = CATEGORY_GRADIENTS[item.category] ?? CATEGORY_GRADIENTS.default
+            const isAvailable = availability?.[item.id] !== false
             return (
               <div
                 key={item.id}
@@ -281,6 +283,7 @@ export function MinimalTemplate({ restaurant, menuItems, categories, onCheckout 
                   boxShadow: '0 2px 16px rgba(0,0,0,0.08)',
                   border: '1px solid #f0f0f0',
                   transition: 'box-shadow 0.2s',
+                  opacity: isAvailable ? 1 : 0.55,
                 }}
               >
                 {/* Image */}
@@ -305,6 +308,11 @@ export function MinimalTemplate({ restaurant, menuItems, categories, onCheckout 
                       letterSpacing: 0.5, textTransform: 'uppercase',
                     }}>
                       🔥 POPULAR
+                    </div>
+                  )}
+                  {!isAvailable && (
+                    <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <span style={{ background: '#ef4444', color: '#fff', fontSize: 11, fontWeight: 900, padding: '5px 14px', borderRadius: 999, letterSpacing: 1, textTransform: 'uppercase' }}>Sold Out</span>
                     </div>
                   )}
                 </div>
@@ -363,7 +371,7 @@ export function MinimalTemplate({ restaurant, menuItems, categories, onCheckout 
                           }}
                         ><Plus size={14} /></button>
                       </div>
-                    ) : (
+                    ) : isAvailable ? (
                       <button
                         onClick={() => addToCart(item)}
                         style={{
@@ -376,6 +384,8 @@ export function MinimalTemplate({ restaurant, menuItems, categories, onCheckout 
                       >
                         <Plus size={14} /> Add
                       </button>
+                    ) : (
+                      <span style={{ fontSize: 12, fontWeight: 700, color: '#ef4444' }}>Sold out</span>
                     )}
                   </div>
                 </div>

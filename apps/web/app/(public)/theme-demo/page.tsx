@@ -422,6 +422,19 @@ export default function DemoPage() {
   const [template, setTemplate] = useState<Template>('bold')
   const [step, setStep] = useState<FlowStep>('browse')
   const [cart, setCart] = useState<CartItem[]>([])
+  const [availability, setAvailability] = useState<Record<string, boolean>>({})
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('BroadcastChannel' in window)) return
+    const ch = new BroadcastChannel('headlessresto_demo')
+    ch.onmessage = ({ data }) => {
+      if (data.type === 'ITEM_UNAVAILABLE' && data.itemId)
+        setAvailability(prev => ({ ...prev, [data.itemId]: false }))
+      if (data.type === 'ITEM_AVAILABLE' && data.itemId)
+        setAvailability(prev => ({ ...prev, [data.itemId]: true }))
+    }
+    return () => ch.close()
+  }, [])
 
   const cfg = TEMPLATE_CONFIG[template]
   const TemplateComponent = template === 'bold' ? BoldTemplate : template === 'minimal' ? MinimalTemplate : WarmTemplate
@@ -448,6 +461,7 @@ export default function DemoPage() {
             menuItems={MOCK_ITEMS}
             categories={MOCK_CATEGORIES}
             onCheckout={handleCheckout}
+            availability={availability}
           />
         )}
         {step === 'checkout' && (

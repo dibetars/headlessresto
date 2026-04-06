@@ -399,7 +399,7 @@ export default function DemoDashboardPage() {
 
   const handleItemToggle = (itemId: string, val: boolean) => {
     setAvailability(prev => ({ ...prev, [itemId]: val }))
-    if (!val) channelRef.current?.postMessage({ type: 'ITEM_UNAVAILABLE', itemId })
+    channelRef.current?.postMessage({ type: val ? 'ITEM_AVAILABLE' : 'ITEM_UNAVAILABLE', itemId })
   }
 
   const handlePOSOrder = (items: DemoOrderItem[], customerName: string) => {
