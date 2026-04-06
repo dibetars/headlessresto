@@ -287,14 +287,7 @@ function DemoTrack({ cart, restaurant, primaryColor, onReset }: {
   const [orderId] = useState(() => 'DEMO-' + Math.random().toString(36).slice(2, 8).toUpperCase())
   const total = cart.reduce((s, i) => s + i.price * i.quantity, 0) * 1.13 + 3.99
 
-  useEffect(() => {
-    const timers = [1800, 3600, 5400, 8000].map((delay, i) =>
-      setTimeout(() => setTrackStep(i + 1), delay)
-    )
-    return () => timers.forEach(clearTimeout)
-  }, [])
-
-  // Listen for status updates from the restaurant dashboard
+  // Only advances when the restaurant updates status in the dashboard
   useEffect(() => {
     if (typeof window === 'undefined' || !('BroadcastChannel' in window)) return
     const STATUS_TO_STEP: Record<string, number> = { pending: 0, preparing: 1, ready: 2, delivered: 4 }
