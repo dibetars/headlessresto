@@ -9,6 +9,7 @@ interface TemplateProps {
   restaurant: { name: string; slug: string; brand_assets: any }
   menuItems: { id: string; name: string; description: string | null; price: number; category: string; image_url: string | null }[]
   categories: string[]
+  onCheckout?: (cart: { id: string; name: string; price: number; quantity: number }[]) => void
 }
 
 interface CartItem {
@@ -50,7 +51,7 @@ const PROMO_BANNERS = [
   { emoji: '🔥', text: 'Deal of the Day', sub: 'Today only', bg: 'linear-gradient(135deg, #dc2626, #b91c1c)' },
 ]
 
-export function WarmTemplate({ restaurant, menuItems, categories }: TemplateProps) {
+export function WarmTemplate({ restaurant, menuItems, categories, onCheckout }: TemplateProps) {
   const router = useRouter()
   const [selectedCategory, setSelectedCategory] = useState<string>('All')
   const [cart, setCart] = useState<CartItem[]>([])
@@ -94,6 +95,19 @@ export function WarmTemplate({ restaurant, menuItems, categories }: TemplateProp
       }}>
         {/* Dark overlay */}
         <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.35)' }} />
+
+        {/* Top nav inside hero */}
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 3, padding: '20px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 22 }}>🌿</span>
+            <span style={{ color: '#fff', fontWeight: 900, fontSize: 18, letterSpacing: -0.5 }}>{restaurant.name}</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
+            {['Menu', 'About', 'Catering', 'Contact'].map(link => (
+              <span key={link} style={{ color: 'rgba(255,255,255,0.75)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>{link}</span>
+            ))}
+          </div>
+        </div>
 
         {/* Rating badge */}
         <div style={{
@@ -345,6 +359,61 @@ export function WarmTemplate({ restaurant, menuItems, categories }: TemplateProp
         </div>
       </div>
 
+      {/* Footer */}
+      <footer style={{ background: '#1e3a1e', padding: '56px 32px 32px', marginTop: 8 }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 40, marginBottom: 48 }}>
+            <div style={{ maxWidth: 300 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+                <span style={{ fontSize: 28 }}>🌿</span>
+                <span style={{ fontSize: 20, fontWeight: 900, color: '#fff', letterSpacing: -0.5 }}>{restaurant.name}</span>
+              </div>
+              <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14, lineHeight: 1.7, margin: '0 0 24px' }}>
+                From local kitchens to your door — fresh, fast, and delicious every time.
+              </p>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: `${primaryColor}33`, border: `1px solid ${primaryColor}55`, borderRadius: 999, padding: '8px 16px' }}>
+                <span style={{ color: '#4ade80', fontSize: 12 }}>●</span>
+                <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13, fontWeight: 600 }}>Open Now · Closes 10pm</span>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 48, flexWrap: 'wrap' }}>
+              <div>
+                <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase' as const, margin: '0 0 16px' }}>Explore</p>
+                {['Our Menu', 'About Us', 'Catering', 'Franchise', 'Blog'].map(l => (
+                  <p key={l} style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14, margin: '0 0 10px', cursor: 'pointer' }}>{l}</p>
+                ))}
+              </div>
+              <div>
+                <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase' as const, margin: '0 0 16px' }}>Hours</p>
+                <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: 14, margin: '0 0 4px' }}>Mon–Fri</p>
+                <p style={{ color: '#fff', fontSize: 15, fontWeight: 700, margin: '0 0 12px' }}>11:00 AM – 10:00 PM</p>
+                <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: 14, margin: '0 0 4px' }}>Sat–Sun</p>
+                <p style={{ color: '#fff', fontSize: 15, fontWeight: 700, margin: 0 }}>10:00 AM – 11:00 PM</p>
+              </div>
+              <div>
+                <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase' as const, margin: '0 0 16px' }}>Find Us</p>
+                <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14, margin: '0 0 8px' }}>📍 123 Garden Street</p>
+                <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14, margin: '0 0 8px' }}>📞 (555) 123-4567</p>
+                <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14, margin: '0 0 20px' }}>✉️ hello@{restaurant.slug}.com</p>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {['🐦', '📸', '📘'].map((icon, i) => (
+                    <div key={i} style={{ width: 34, height: 34, borderRadius: 8, background: 'rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, cursor: 'pointer' }}>{icon}</div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+            <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: 12, margin: 0 }}>© 2026 {restaurant.name}. All rights reserved.</p>
+            <div style={{ display: 'flex', gap: 12 }}>
+              {['Privacy', 'Terms', 'Cookies'].map(l => (
+                <span key={l} style={{ color: 'rgba(255,255,255,0.3)', fontSize: 12, cursor: 'pointer' }}>{l}</span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </footer>
+
       {/* Floating Cart Button */}
       {totalQty > 0 && (
         <button
@@ -443,8 +512,12 @@ export function WarmTemplate({ restaurant, menuItems, categories }: TemplateProp
                   </div>
                   <button
                     onClick={() => {
-                      sessionStorage.setItem(`cart_${restaurant.slug}`, JSON.stringify(cart))
-                      router.push(`/menu/${restaurant.slug}/checkout`)
+                      if (onCheckout) {
+                        onCheckout(cart)
+                      } else {
+                        sessionStorage.setItem(`cart_${restaurant.slug}`, JSON.stringify(cart))
+                        router.push(`/menu/${restaurant.slug}/checkout`)
+                      }
                     }}
                     style={{
                       width: '100%', padding: '16px',

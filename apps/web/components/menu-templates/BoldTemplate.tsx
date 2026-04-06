@@ -9,6 +9,7 @@ interface TemplateProps {
   restaurant: { name: string; slug: string; brand_assets: any }
   menuItems: { id: string; name: string; description: string | null; price: number; category: string; image_url: string | null }[]
   categories: string[]
+  onCheckout?: (cart: { id: string; name: string; price: number; quantity: number }[]) => void
 }
 
 interface CartItem {
@@ -43,7 +44,7 @@ function getItemMeta(name: string) {
   }
 }
 
-export function BoldTemplate({ restaurant, menuItems, categories }: TemplateProps) {
+export function BoldTemplate({ restaurant, menuItems, categories, onCheckout }: TemplateProps) {
   const router = useRouter()
   const [selectedCategory, setSelectedCategory] = useState<string>(categories[0] ?? '')
   const [cart, setCart] = useState<CartItem[]>([])
@@ -85,15 +86,25 @@ export function BoldTemplate({ restaurant, menuItems, categories }: TemplateProp
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <span style={{ fontSize: 18, fontWeight: 900, letterSpacing: -0.5, color: '#fff' }}>
-            {restaurant.name}
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 22 }}>🍔</span>
+            <span style={{ fontSize: 18, fontWeight: 900, letterSpacing: -0.5, color: '#fff' }}>
+              {restaurant.name}
+            </span>
+          </div>
           <span style={{
             background: 'linear-gradient(135deg, #22c55e, #16a34a)',
             color: '#fff', fontSize: 10, fontWeight: 800,
             padding: '3px 10px', borderRadius: 999, letterSpacing: 1,
             textTransform: 'uppercase',
           }}>OPEN</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
+          {['Menu', 'About', 'Contact'].map(link => (
+            <span key={link} style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, fontWeight: 600, cursor: 'pointer', letterSpacing: 0.3 }}>
+              {link}
+            </span>
+          ))}
         </div>
         <button
           onClick={() => setCartOpen(true)}
@@ -331,6 +342,54 @@ export function BoldTemplate({ restaurant, menuItems, categories }: TemplateProp
         })}
       </div>
 
+      {/* Footer */}
+      <footer style={{ background: '#080808', borderTop: '1px solid rgba(255,255,255,0.06)', padding: '56px 32px 32px' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 40, marginBottom: 48 }}>
+            <div style={{ maxWidth: 300 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+                <span style={{ fontSize: 28 }}>🍔</span>
+                <span style={{ fontSize: 20, fontWeight: 900, color: '#fff', letterSpacing: -0.5 }}>{restaurant.name}</span>
+              </div>
+              <p style={{ color: '#555', fontSize: 14, lineHeight: 1.7, margin: '0 0 24px' }}>
+                Hot food at your door in minutes. No hassle, just great taste. Serving your city since 2020.
+              </p>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {[{ icon: '🐦', label: 'Twitter' }, { icon: '📸', label: 'Instagram' }, { icon: '📘', label: 'Facebook' }].map(s => (
+                  <div key={s.label} title={s.label} style={{ width: 34, height: 34, borderRadius: 8, background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, cursor: 'pointer' }}>{s.icon}</div>
+                ))}
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 48, flexWrap: 'wrap' }}>
+              <div>
+                <p style={{ color: '#666', fontSize: 11, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase' as const, margin: '0 0 16px' }}>Menu</p>
+                {['Burgers', 'Pizza', 'Salads', 'Desserts', 'Drinks'].map(l => (
+                  <p key={l} style={{ color: '#444', fontSize: 14, margin: '0 0 10px', cursor: 'pointer' }}>{l}</p>
+                ))}
+              </div>
+              <div>
+                <p style={{ color: '#666', fontSize: 11, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase' as const, margin: '0 0 16px' }}>Company</p>
+                {['About Us', 'Careers', 'Press', 'Blog'].map(l => (
+                  <p key={l} style={{ color: '#444', fontSize: 14, margin: '0 0 10px', cursor: 'pointer' }}>{l}</p>
+                ))}
+              </div>
+              <div>
+                <p style={{ color: '#666', fontSize: 11, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase' as const, margin: '0 0 16px' }}>Hours</p>
+                <p style={{ color: '#444', fontSize: 14, margin: '0 0 6px' }}>Mon–Fri: 11am – 10pm</p>
+                <p style={{ color: '#444', fontSize: 14, margin: '0 0 20px' }}>Sat–Sun: 10am – 11pm</p>
+                <p style={{ color: '#666', fontSize: 11, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase' as const, margin: '0 0 12px' }}>Contact</p>
+                <p style={{ color: '#444', fontSize: 14, margin: '0 0 6px' }}>📞 (555) 123-4567</p>
+                <p style={{ color: '#444', fontSize: 14, margin: 0 }}>✉️ hello@{restaurant.slug}.com</p>
+              </div>
+            </div>
+          </div>
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+            <p style={{ color: '#333', fontSize: 12, margin: 0 }}>© 2026 {restaurant.name}. All rights reserved. · Privacy Policy · Terms</p>
+            <p style={{ color: '#333', fontSize: 12, margin: 0 }}>Powered by HeadlessResto</p>
+          </div>
+        </div>
+      </footer>
+
       {/* Cart Drawer */}
       {cartOpen && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 50 }}>
@@ -415,8 +474,12 @@ export function BoldTemplate({ restaurant, menuItems, categories }: TemplateProp
                   </div>
                   <button
                     onClick={() => {
-                      sessionStorage.setItem(`cart_${restaurant.slug}`, JSON.stringify(cart))
-                      router.push(`/menu/${restaurant.slug}/checkout`)
+                      if (onCheckout) {
+                        onCheckout(cart)
+                      } else {
+                        sessionStorage.setItem(`cart_${restaurant.slug}`, JSON.stringify(cart))
+                        router.push(`/menu/${restaurant.slug}/checkout`)
+                      }
                     }}
                     style={{
                       width: '100%', padding: '16px', background: primaryColor,

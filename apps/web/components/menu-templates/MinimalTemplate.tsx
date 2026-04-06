@@ -9,6 +9,7 @@ interface TemplateProps {
   restaurant: { name: string; slug: string; brand_assets: any }
   menuItems: { id: string; name: string; description: string | null; price: number; category: string; image_url: string | null }[]
   categories: string[]
+  onCheckout?: (cart: { id: string; name: string; price: number; quantity: number }[]) => void
 }
 
 interface CartItem {
@@ -43,7 +44,7 @@ function getItemMeta(name: string) {
   }
 }
 
-export function MinimalTemplate({ restaurant, menuItems, categories }: TemplateProps) {
+export function MinimalTemplate({ restaurant, menuItems, categories, onCheckout }: TemplateProps) {
   const router = useRouter()
   const [selectedCategory, setSelectedCategory] = useState<string>(categories[0] ?? '')
   const [cart, setCart] = useState<CartItem[]>([])
@@ -98,6 +99,11 @@ export function MinimalTemplate({ restaurant, menuItems, categories }: TemplateP
           <h1 style={{ margin: 0, fontSize: 20, fontWeight: 800, letterSpacing: -0.5, color: '#111' }}>
             {restaurant.name}
           </h1>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 28 }}>
+          {['Menu', 'About', 'Catering', 'Contact'].map(link => (
+            <span key={link} style={{ color: '#6b7280', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>{link}</span>
+          ))}
         </div>
         <button
           onClick={() => setCartOpen(true)}
@@ -384,6 +390,59 @@ export function MinimalTemplate({ restaurant, menuItems, categories }: TemplateP
         </div>
       </div>
 
+      {/* Footer */}
+      <footer style={{ background: '#f9fafb', borderTop: '2px solid #f0f0f0', padding: '56px 40px 32px', marginTop: 16 }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 40, marginBottom: 48 }}>
+            <div style={{ maxWidth: 280 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 12, background: primaryColor, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ fontSize: 22 }}>🍃</span>
+                </div>
+                <span style={{ fontSize: 20, fontWeight: 800, color: '#111' }}>{restaurant.name}</span>
+              </div>
+              <p style={{ color: '#6b7280', fontSize: 14, lineHeight: 1.7, margin: '0 0 20px' }}>
+                Fresh ingredients, fast delivery. We believe great food should come to you.
+              </p>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {[{ icon: '🐦', label: 'Twitter' }, { icon: '📸', label: 'Instagram' }, { icon: '📘', label: 'Facebook' }].map(s => (
+                  <div key={s.label} title={s.label} style={{ width: 36, height: 36, borderRadius: 10, background: '#f3f4f6', border: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, cursor: 'pointer' }}>{s.icon}</div>
+                ))}
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 48, flexWrap: 'wrap' }}>
+              <div>
+                <p style={{ color: '#111', fontSize: 13, fontWeight: 800, margin: '0 0 16px' }}>Quick Links</p>
+                {['Menu', 'About Us', 'Catering', 'Gift Cards', 'Careers'].map(l => (
+                  <p key={l} style={{ color: '#6b7280', fontSize: 14, margin: '0 0 10px', cursor: 'pointer' }}>{l}</p>
+                ))}
+              </div>
+              <div>
+                <p style={{ color: '#111', fontSize: 13, fontWeight: 800, margin: '0 0 16px' }}>Hours</p>
+                <p style={{ color: '#6b7280', fontSize: 14, margin: '0 0 6px' }}>Mon–Fri</p>
+                <p style={{ color: '#374151', fontSize: 14, fontWeight: 600, margin: '0 0 12px' }}>11:00 AM – 10:00 PM</p>
+                <p style={{ color: '#6b7280', fontSize: 14, margin: '0 0 6px' }}>Sat–Sun</p>
+                <p style={{ color: '#374151', fontSize: 14, fontWeight: 600, margin: 0 }}>10:00 AM – 11:00 PM</p>
+              </div>
+              <div>
+                <p style={{ color: '#111', fontSize: 13, fontWeight: 800, margin: '0 0 16px' }}>Contact</p>
+                <p style={{ color: '#6b7280', fontSize: 14, margin: '0 0 8px' }}>📍 123 Fresh Ave, City</p>
+                <p style={{ color: '#6b7280', fontSize: 14, margin: '0 0 8px' }}>📞 (555) 123-4567</p>
+                <p style={{ color: '#6b7280', fontSize: 14, margin: 0 }}>✉️ hello@{restaurant.slug}.com</p>
+              </div>
+            </div>
+          </div>
+          <div style={{ borderTop: `2px solid ${primaryColor}22`, paddingTop: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+            <p style={{ color: '#9ca3af', fontSize: 12, margin: 0 }}>© 2026 {restaurant.name}. All rights reserved.</p>
+            <div style={{ display: 'flex', gap: 12 }}>
+              {['Privacy Policy', 'Terms of Service', 'Accessibility'].map(l => (
+                <span key={l} style={{ color: '#9ca3af', fontSize: 12, cursor: 'pointer' }}>{l}</span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </footer>
+
       {/* Cart Drawer */}
       {cartOpen && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 50 }}>
@@ -464,8 +523,12 @@ export function MinimalTemplate({ restaurant, menuItems, categories }: TemplateP
                   </div>
                   <button
                     onClick={() => {
-                      sessionStorage.setItem(`cart_${restaurant.slug}`, JSON.stringify(cart))
-                      router.push(`/menu/${restaurant.slug}/checkout`)
+                      if (onCheckout) {
+                        onCheckout(cart)
+                      } else {
+                        sessionStorage.setItem(`cart_${restaurant.slug}`, JSON.stringify(cart))
+                        router.push(`/menu/${restaurant.slug}/checkout`)
+                      }
                     }}
                     style={{
                       width: '100%', padding: '16px',
