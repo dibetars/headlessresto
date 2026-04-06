@@ -85,6 +85,7 @@ export function WarmTemplate({ restaurant, menuItems, categories, onCheckout }: 
 
   return (
     <div style={{ background: '#f5f7f0', minHeight: '100vh', color: '#1a2e1a', fontFamily: "'Inter', 'Helvetica Neue', sans-serif" }}>
+      <style>{`.warm-nav-links{display:flex!important} @media(max-width:640px){.warm-nav-links{display:none!important}}`}</style>
 
       {/* Hero */}
       <div style={{
@@ -102,7 +103,7 @@ export function WarmTemplate({ restaurant, menuItems, categories, onCheckout }: 
             <span style={{ fontSize: 22 }}>🌿</span>
             <span style={{ color: '#fff', fontWeight: 900, fontSize: 18, letterSpacing: -0.5 }}>{restaurant.name}</span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
+          <div className="warm-nav-links" style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
             {['Menu', 'About', 'Catering', 'Contact'].map(link => (
               <span key={link} style={{ color: 'rgba(255,255,255,0.75)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>{link}</span>
             ))}

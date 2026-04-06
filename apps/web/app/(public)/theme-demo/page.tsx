@@ -59,27 +59,38 @@ function DemoChrome({ activeTemplate, onTemplateChange, step }: {
   const primaryColor = TEMPLATE_CONFIG[activeTemplate].primary
 
   return (
-    <div style={{
-      background: '#0a0a0a', borderBottom: '1px solid rgba(255,255,255,0.08)',
-      padding: '0 24px', height: 56,
-      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16,
-      flexShrink: 0,
-    }}>
+    <>
+      <style>{`
+        .demo-subtitle { display: flex; }
+        .demo-flow { display: flex; }
+        .demo-tab-label { display: inline; }
+        @media (max-width: 640px) {
+          .demo-subtitle { display: none !important; }
+          .demo-flow { display: none !important; }
+          .demo-tab-label { display: none !important; }
+        }
+      `}</style>
+      <div style={{
+        background: '#0a0a0a', borderBottom: '1px solid rgba(255,255,255,0.08)',
+        padding: '0 16px', height: 52,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+        flexShrink: 0,
+      }}>
       {/* Brand */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
         <div style={{ background: primaryColor, borderRadius: 6, padding: '3px 9px', fontSize: 11, fontWeight: 900, color: '#fff', letterSpacing: 1, textTransform: 'uppercase' as const }}>DEMO</div>
-        <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, fontWeight: 500 }}>HeadlessResto · Template Preview</span>
+        <span className="demo-subtitle" style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap' as const }}>HeadlessResto · Template Preview</span>
       </div>
 
       {/* Template switcher */}
-      <div style={{ display: 'flex', background: 'rgba(255,255,255,0.05)', borderRadius: 10, padding: 4, gap: 2 }}>
+      <div style={{ display: 'flex', background: 'rgba(255,255,255,0.05)', borderRadius: 10, padding: 3, gap: 2, flexShrink: 0 }}>
         {(Object.entries(TEMPLATE_CONFIG) as [Template, typeof TEMPLATE_CONFIG[Template]][]).map(([key, cfg]) => (
           <button
             key={key}
             onClick={() => onTemplateChange(key)}
             style={{
-              display: 'flex', alignItems: 'center', gap: 6,
-              padding: '6px 14px', borderRadius: 7, border: 'none',
+              display: 'flex', alignItems: 'center', gap: 5,
+              padding: '6px 12px', borderRadius: 7, border: 'none',
               background: activeTemplate === key ? primaryColor : 'transparent',
               color: activeTemplate === key ? '#fff' : 'rgba(255,255,255,0.45)',
               fontWeight: activeTemplate === key ? 700 : 500,
@@ -87,13 +98,13 @@ function DemoChrome({ activeTemplate, onTemplateChange, step }: {
             }}
           >
             <span style={{ fontSize: 14 }}>{cfg.emoji}</span>
-            {cfg.label}
+            <span className="demo-tab-label">{cfg.label}</span>
           </button>
         ))}
       </div>
 
       {/* Flow steps */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+      <div className="demo-flow" style={{ alignItems: 'center', gap: 4 }}>
         {steps.map((s, i) => {
           const isActive = s.key === step
           const isDone = steps.findIndex(x => x.key === step) > i
@@ -119,6 +130,7 @@ function DemoChrome({ activeTemplate, onTemplateChange, step }: {
         })}
       </div>
     </div>
+    </>
   )
 }
 
@@ -147,7 +159,7 @@ function DemoCheckout({ cart, restaurant, primaryColor, onBack, onPlace }: {
 
         <h2 style={{ margin: '0 0 32px', fontSize: 28, fontWeight: 900, color: '#111', letterSpacing: -0.5 }}>Checkout</h2>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: 24, alignItems: 'start' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) min(380px, 100%)', gap: 24, alignItems: 'start' }}>
           {/* Left: form */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             {/* Customer details */}

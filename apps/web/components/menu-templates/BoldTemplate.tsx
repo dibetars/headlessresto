@@ -76,6 +76,7 @@ export function BoldTemplate({ restaurant, menuItems, categories, onCheckout }: 
 
   return (
     <div style={{ background: '#0f0f0f', minHeight: '100vh', color: '#fff', fontFamily: "'Inter', 'Helvetica Neue', sans-serif" }}>
+      <style>{`.bold-nav-links { display: flex } @media(max-width:640px){.bold-nav-links{display:none!important}}`}</style>
 
       {/* Sticky Nav */}
       <nav style={{
@@ -99,7 +100,7 @@ export function BoldTemplate({ restaurant, menuItems, categories, onCheckout }: 
             textTransform: 'uppercase',
           }}>OPEN</span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
+        <div className="bold-nav-links" style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
           {['Menu', 'About', 'Contact'].map(link => (
             <span key={link} style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, fontWeight: 600, cursor: 'pointer', letterSpacing: 0.3 }}>
               {link}

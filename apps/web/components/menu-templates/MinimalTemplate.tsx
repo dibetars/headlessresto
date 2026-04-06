@@ -79,6 +79,7 @@ export function MinimalTemplate({ restaurant, menuItems, categories, onCheckout 
 
   return (
     <div style={{ background: '#fff', minHeight: '100vh', color: '#111', fontFamily: "'Inter', 'Helvetica Neue', sans-serif" }}>
+      <style>{`.minimal-nav-links{display:flex} @media(max-width:640px){.minimal-nav-links{display:none!important}}`}</style>
 
       {/* Sticky Header */}
       <header style={{
@@ -100,7 +101,7 @@ export function MinimalTemplate({ restaurant, menuItems, categories, onCheckout 
             {restaurant.name}
           </h1>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 28 }}>
+        <div className="minimal-nav-links" style={{ display: 'flex', alignItems: 'center', gap: 28 }}>
           {['Menu', 'About', 'Catering', 'Contact'].map(link => (
             <span key={link} style={{ color: '#6b7280', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>{link}</span>
           ))}
