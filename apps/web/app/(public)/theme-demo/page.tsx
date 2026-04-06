@@ -248,8 +248,8 @@ function DemoTrack({ cart, restaurant, primaryColor, onReset }: {
   primaryColor: string; onReset: () => void
 }) {
   const [trackStep, setTrackStep] = useState(0)
+  const [orderId] = useState(() => 'DEMO-' + Math.random().toString(36).slice(2, 8).toUpperCase())
   const total = cart.reduce((s, i) => s + i.price * i.quantity, 0) * 1.13 + 3.99
-  const orderId = 'DEMO-' + Math.random().toString(36).slice(2, 8).toUpperCase()
 
   useEffect(() => {
     const timers = [1800, 3600, 5400, 8000].map((delay, i) =>
@@ -395,7 +395,7 @@ export default function DemoPage() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', background: '#0a0a0a' }}>
+    <div suppressHydrationWarning style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', background: '#0a0a0a' }}>
       <DemoChrome activeTemplate={template} onTemplateChange={handleTemplateChange} step={step} />
 
       <div style={{ flex: 1, overflowY: 'auto', position: 'relative' }}>
