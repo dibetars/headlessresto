@@ -147,7 +147,31 @@ function DemoCheckout({ cart, restaurant, primaryColor, onBack, onPlace }: {
 
   const handlePlace = () => {
     setPlacing(true)
-    setTimeout(() => { setPlacing(false); onPlace() }, 1600)
+    setTimeout(() => {
+      setPlacing(false)
+      // Broadcast to dashboard demo tab
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        const orderId = 'DEMO-' + Math.random().toString(36).slice(2, 8).toUpperCase()
+        const subtotal = cart.reduce((s, i) => s + i.price * i.quantity, 0)
+        const order = {
+          id: orderId, customerName: 'Jane Demo',
+          address: '123 Demo Street, Apt 4B, San Francisco, CA 94105',
+          items: cart.map(i => ({ name: i.name, quantity: i.quantity, price: i.price })),
+          total: parseFloat((subtotal * 1.1 + 3.99).toFixed(2)),
+          timestamp: new Date().toISOString(), status: 'pending', source: 'customer',
+        }
+        try {
+          const existing = JSON.parse(localStorage.getItem('headlessresto_demo_orders') || '[]')
+          localStorage.setItem('headlessresto_demo_orders', JSON.stringify([...existing, order].slice(-50)))
+        } catch {}
+        try {
+          const ch = new BroadcastChannel('headlessresto_demo')
+          ch.postMessage({ type: 'NEW_ORDER', order })
+          ch.close()
+        } catch {}
+      }
+      onPlace()
+    }, 1600)
   }
 
   return (
@@ -268,6 +292,20 @@ function DemoTrack({ cart, restaurant, primaryColor, onReset }: {
       setTimeout(() => setTrackStep(i + 1), delay)
     )
     return () => timers.forEach(clearTimeout)
+  }, [])
+
+  // Listen for status updates from the restaurant dashboard
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('BroadcastChannel' in window)) return
+    const STATUS_TO_STEP: Record<string, number> = { pending: 0, preparing: 1, ready: 2, delivered: 4 }
+    const ch = new BroadcastChannel('headlessresto_demo')
+    ch.onmessage = (event: MessageEvent) => {
+      const { type, status } = event.data ?? {}
+      if (type === 'ORDER_STATUS' && status && STATUS_TO_STEP[status] !== undefined) {
+        setTrackStep(prev => Math.max(prev, STATUS_TO_STEP[status]))
+      }
+    }
+    return () => ch.close()
   }, [])
 
   const kitchenSteps = [
