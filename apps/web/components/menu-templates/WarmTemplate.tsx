@@ -83,7 +83,11 @@ export function WarmTemplate({ restaurant, menuItems, categories, onCheckout }: 
   const filtered = (selectedCategory === 'All'
     ? menuItems
     : menuItems.filter(i => i.category === selectedCategory)
-  ).filter(i => !searchQuery || i.name.toLowerCase().includes(searchQuery.toLowerCase()) || (i.description ?? '').toLowerCase().includes(searchQuery.toLowerCase()))
+  ).filter(i =>
+    !searchQuery ||
+    i.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (i.description ?? '').toLowerCase().includes(searchQuery.toLowerCase())
+  )
 
   return (
     <div style={{ background: '#f5f7f0', minHeight: '100vh', color: '#1a2e1a', fontFamily: "'Inter', 'Helvetica Neue', sans-serif" }}>
