@@ -1,6 +1,17 @@
 # Demo Tester Notes — HeadlessResto
 
-## Prerequisites
+## Live Preview URLs (Vercel — `feature/mvp`)
+
+| Page | URL |
+|------|-----|
+| Customer Menu Demo | https://headlessresto-git-feature-mvp-dibe-labas-projects.vercel.app/theme-demo |
+| Restaurant Dashboard | https://headlessresto-git-feature-mvp-dibe-labas-projects.vercel.app/demo-dashboard |
+
+> For the live sync flow, open both URLs side by side in the **same browser**.
+
+---
+
+## Local Setup (optional)
 
 - Node.js + pnpm installed
 - Clone the repo and checkout `feature/mvp`
@@ -15,7 +26,7 @@
 
 ## 1. Customer Menu Demo — `/theme-demo`
 
-**URL:** `http://localhost:3000/theme-demo`
+**URL:** https://headlessresto-git-feature-mvp-dibe-labas-projects.vercel.app/theme-demo
 
 | Action | Expected |
 |--------|----------|
@@ -31,7 +42,7 @@
 
 ## 2. Restaurant Dashboard Demo — `/demo-dashboard`
 
-**URL:** `http://localhost:3000/demo-dashboard`
+**URL:** https://headlessresto-git-feature-mvp-dibe-labas-projects.vercel.app/demo-dashboard
 
 ### Orders / KDS tab
 
@@ -64,8 +75,8 @@
 
 This is the key end-to-end flow. Open both pages side by side in the **same browser window**:
 
-1. Open `http://localhost:3000/demo-dashboard` in **Tab 1**
-2. Open `http://localhost:3000/theme-demo` in **Tab 2**
+1. Open `https://headlessresto-git-feature-mvp-dibe-labas-projects.vercel.app/demo-dashboard` in **Tab 1**
+2. Open `https://headlessresto-git-feature-mvp-dibe-labas-projects.vercel.app/theme-demo` in **Tab 2**
 3. Dashboard top bar should show **● Live Sync** in green
 4. In **Tab 2** (customer): add items → Checkout → Place Demo Order
 5. In **Tab 1** (dashboard): new order ticket appears instantly with a pulsing border
