@@ -5,6 +5,7 @@ import { BoldTemplate } from '@/components/menu-templates/BoldTemplate'
 import { MinimalTemplate } from '@/components/menu-templates/MinimalTemplate'
 import { WarmTemplate } from '@/components/menu-templates/WarmTemplate'
 import { ChevronRight, ArrowLeft, Check, MapPin, Phone, User, Clock, Truck, Star } from 'lucide-react'
+import { DeliveryMap } from '@/components/DeliveryMap'
 
 type Template = 'bold' | 'minimal' | 'warm'
 type FlowStep = 'browse' | 'checkout' | 'track'
@@ -368,6 +369,11 @@ function DemoTrack({ cart, restaurant, primaryColor, onReset }: {
               )
             })}
           </div>
+        </div>
+
+        {/* Delivery Map */}
+        <div style={{ marginBottom: 24 }}>
+          <DeliveryMap mode="demo" step={trackStep} primaryColor={primaryColor} />
         </div>
 
         {/* Driver card */}

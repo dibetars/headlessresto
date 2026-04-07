@@ -1,5 +1,6 @@
 import { getPublicOrderAction } from '@/app/auth/actions/public-orders'
 import { notFound } from 'next/navigation'
+import { DeliveryMap } from '@/components/DeliveryMap'
 
 const ORDER_STEPS = [
   { key: 'pending',   label: 'Order Received',  emoji: '📋' },
@@ -124,16 +125,13 @@ export default async function TrackOrderPage({
             </div>
           )}
 
-          {delivery.trackingUrl && (
-            <a
-              href={delivery.trackingUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ display: 'block', textAlign: 'center', padding: '14px', background: '#FF6B00', color: '#fff', borderRadius: 12, textDecoration: 'none', fontWeight: 700, fontSize: 15, marginBottom: 20 }}
-            >
-              Track on Uber →
-            </a>
-          )}
+          <div style={{ marginBottom: 20 }}>
+            <DeliveryMap
+              mode="live"
+              trackingUrl={delivery.trackingUrl ?? undefined}
+              primaryColor="#FF6B00"
+            />
+          </div>
         </>
       )}
 
