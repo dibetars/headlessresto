@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Check, Clock, ShoppingBag, TrendingUp, Users, ToggleLeft, ToggleRight, Plus, Minus, ChevronRight } from 'lucide-react'
+import { Check, Clock, ShoppingBag, TrendingUp, Users, ToggleLeft, ToggleRight, Plus, Minus, ChevronRight, Pencil, Trash2, X } from 'lucide-react'
 
 /* ── Types ─────────────────────────────────────────────────────── */
 type DemoOrderStatus = 'pending' | 'preparing' | 'ready' | 'delivered'
@@ -261,11 +261,13 @@ function KDSPanel({ orders, newOrderIds, onAdvance }: {
 }
 
 /* ── Menu Panel ────────────────────────────────────────────────── */
-function MenuPanel({ menuItems, availability, onToggle, onAdd }: {
+function MenuPanel({ menuItems, availability, onToggle, onAdd, onEdit, onDelete }: {
   menuItems: DemoMenuItem[]
   availability: Record<string, boolean>
   onToggle: (id: string, val: boolean) => void
   onAdd: (item: DemoMenuItem) => void
+  onEdit: (item: DemoMenuItem) => void
+  onDelete: (id: string) => void
 }) {
   const categories = ['All', ...Array.from(new Set(menuItems.map(i => i.category)))]
   const [cat, setCat] = useState('All')
@@ -276,6 +278,22 @@ function MenuPanel({ menuItems, availability, onToggle, onAdd }: {
   const [urlInput, setUrlInput] = useState('')
   const [imageTab, setImageTab] = useState<'stock' | 'url' | 'upload'>('stock')
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editForm, setEditForm] = useState({ name: '', price: '', category: '' })
+  const allCategories = Array.from(new Set([...BASE_CATEGORIES, ...menuItems.map(i => i.category)]))
+
+  const startEdit = (item: DemoMenuItem) => {
+    setEditingId(item.id)
+    setEditForm({ name: item.name, price: item.price.toFixed(2), category: item.category })
+  }
+  const saveEdit = (item: DemoMenuItem) => {
+    const name = editForm.name.trim()
+    const price = parseFloat(editForm.price)
+    const category = editForm.category.trim()
+    if (!name || !price || !category) return
+    onEdit({ ...item, name, price, category })
+    setEditingId(null)
+  }
 
   const filtered = cat === 'All' ? menuItems : menuItems.filter(i => i.category === cat)
   const available = menuItems.filter(i => availability[i.id] !== false).length
@@ -395,27 +413,50 @@ function MenuPanel({ menuItems, availability, onToggle, onAdd }: {
       <div style={{ background: '#fff', borderRadius: 16, overflow: 'hidden', boxShadow: '0 1px 10px rgba(0,0,0,0.07)' }}>
         {filtered.map((item, i) => {
           const on = availability[item.id] !== false
+          const isEditing = editingId === item.id
           return (
-            <div key={item.id} style={{ display: 'flex', alignItems: 'center', padding: '12px 20px', borderBottom: i < filtered.length - 1 ? '1px solid #f5f5f5' : 'none', opacity: on ? 1 : 0.5, gap: 12 }}>
-              {/* Thumbnail */}
-              <div style={{ width: 44, height: 44, borderRadius: 8, overflow: 'hidden', flexShrink: 0, background: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>
-                {item.image_url
-                  ? <img src={item.image_url} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  : '🍽️'}
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: '#111' }}>{item.name}</span>
-                  {item.id.startsWith('CUSTOM-') && <span style={{ fontSize: 10, fontWeight: 700, background: '#ede9fe', color: '#7c3aed', borderRadius: 5, padding: '1px 6px' }}>NEW</span>}
+            <div key={item.id} style={{ borderBottom: i < filtered.length - 1 ? '1px solid #f5f5f5' : 'none' }}>
+              {/* Normal row */}
+              {!isEditing && (
+                <div style={{ display: 'flex', alignItems: 'center', padding: '12px 20px', opacity: on ? 1 : 0.5, gap: 12 }}>
+                  <div style={{ width: 44, height: 44, borderRadius: 8, overflow: 'hidden', flexShrink: 0, background: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>
+                    {item.image_url ? <img src={item.image_url} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '🍽️'}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: '#111' }}>{item.name}</span>
+                      {item.id.startsWith('CUSTOM-') && <span style={{ fontSize: 10, fontWeight: 700, background: '#ede9fe', color: '#7c3aed', borderRadius: 5, padding: '1px 6px' }}>NEW</span>}
+                    </div>
+                    <div style={{ fontSize: 12, color: '#9ca3af' }}>{item.category} · ${item.price.toFixed(2)}</div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: on ? '#16a34a' : '#ef4444' }}>{on ? 'Available' : "86'd"}</span>
+                    <button onClick={() => onToggle(item.id, !on)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: on ? '#16a34a' : '#ef4444', display: 'flex', alignItems: 'center' }}>
+                      {on ? <ToggleRight size={28} /> : <ToggleLeft size={28} />}
+                    </button>
+                    <button onClick={() => startEdit(item)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', padding: '4px', borderRadius: 6, display: 'flex', alignItems: 'center' }} title="Edit">
+                      <Pencil size={15} />
+                    </button>
+                    <button onClick={() => onDelete(item.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: '4px', borderRadius: 6, display: 'flex', alignItems: 'center' }} title="Delete">
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
                 </div>
-                <div style={{ fontSize: 12, color: '#9ca3af' }}>{item.category} · ${item.price.toFixed(2)}</div>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 12, fontWeight: 700, color: on ? '#16a34a' : '#ef4444' }}>{on ? 'Available' : "86'd"}</span>
-                <button onClick={() => onToggle(item.id, !on)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: on ? '#16a34a' : '#ef4444', display: 'flex', alignItems: 'center' }}>
-                  {on ? <ToggleRight size={28} /> : <ToggleLeft size={28} />}
-                </button>
-              </div>
+              )}
+              {/* Inline edit row */}
+              {isEditing && (
+                <div style={{ padding: '12px 20px', background: '#f0fdf4', display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+                  <input value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} placeholder="Name" style={{ flex: '2 1 140px', padding: '7px 10px', border: '1.5px solid #16a34a', borderRadius: 8, fontSize: 13, outline: 'none' }} />
+                  <input type="number" min="0" step="0.01" value={editForm.price} onChange={e => setEditForm(f => ({ ...f, price: e.target.value }))} placeholder="Price" style={{ flex: '1 1 80px', padding: '7px 10px', border: '1.5px solid #16a34a', borderRadius: 8, fontSize: 13, outline: 'none' }} />
+                  <select value={editForm.category} onChange={e => setEditForm(f => ({ ...f, category: e.target.value }))} style={{ flex: '1 1 110px', padding: '7px 10px', border: '1.5px solid #16a34a', borderRadius: 8, fontSize: 13, outline: 'none', background: '#fff' }}>
+                    {allCategories.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button onClick={() => saveEdit(item)} style={{ background: '#16a34a', color: '#fff', border: 'none', borderRadius: 8, padding: '7px 14px', fontSize: 13, fontWeight: 800, cursor: 'pointer' }}>Save</button>
+                    <button onClick={() => setEditingId(null)} style={{ background: '#f3f4f6', color: '#374151', border: 'none', borderRadius: 8, padding: '7px 10px', fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center' }}><X size={14} /></button>
+                  </div>
+                </div>
+              )}
             </div>
           )
         })}
@@ -586,6 +627,17 @@ export default function DemoDashboardPage() {
     channelRef.current?.postMessage({ type: 'MENU_ITEM_ADDED', item })
   }
 
+  const handleEditMenuItem = (item: DemoMenuItem) => {
+    setMenuItems(prev => prev.map(i => i.id === item.id ? item : i))
+    channelRef.current?.postMessage({ type: 'MENU_ITEM_UPDATED', item })
+  }
+
+  const handleDeleteMenuItem = (id: string) => {
+    setMenuItems(prev => prev.filter(i => i.id !== id))
+    setAvailability(prev => { const n = { ...prev }; delete n[id]; return n })
+    channelRef.current?.postMessage({ type: 'MENU_ITEM_DELETED', itemId: id })
+  }
+
   const handlePOSOrder = (items: DemoOrderItem[], customerName: string) => {
     const id = 'POS-' + Math.random().toString(36).slice(2, 8).toUpperCase()
     const total = items.reduce((s, i) => s + i.price * i.quantity, 0)
@@ -608,7 +660,7 @@ export default function DemoDashboardPage() {
       <DashboardChrome activeTab={activeTab} onTabChange={setActiveTab} syncActive={syncActive} />
       <div style={{ flex: 1, overflowY: 'auto', padding: '24px 20px' }}>
         {activeTab === 'kds' && <KDSPanel orders={orders} newOrderIds={newOrderIds} onAdvance={handleStatusAdvance} />}
-        {activeTab === 'menu' && <MenuPanel menuItems={menuItems} availability={availability} onToggle={handleItemToggle} onAdd={handleAddMenuItem} />}
+        {activeTab === 'menu' && <MenuPanel menuItems={menuItems} availability={availability} onToggle={handleItemToggle} onAdd={handleAddMenuItem} onEdit={handleEditMenuItem} onDelete={handleDeleteMenuItem} />}
         {activeTab === 'pos' && <POSPanel menuItems={menuItems} onPlaceOrder={handlePOSOrder} />}
       </div>
     </div>

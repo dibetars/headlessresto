@@ -441,6 +441,10 @@ export default function DemoPage() {
         setAvailability(prev => ({ ...prev, [data.itemId]: true }))
       if (data.type === 'MENU_ITEM_ADDED' && data.item)
         setMenuItems(prev => prev.some(i => i.id === data.item.id) ? prev : [...prev, data.item])
+      if (data.type === 'MENU_ITEM_UPDATED' && data.item)
+        setMenuItems(prev => prev.map(i => i.id === data.item.id ? { ...i, ...data.item } : i))
+      if (data.type === 'MENU_ITEM_DELETED' && data.itemId)
+        setMenuItems(prev => prev.filter(i => i.id !== data.itemId))
     }
     return () => ch.close()
   }, [])
