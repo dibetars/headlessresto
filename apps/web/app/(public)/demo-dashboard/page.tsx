@@ -278,6 +278,7 @@ function MenuPanel({ menuItems, availability, onToggle, onAdd, onEdit, onDelete 
   const [urlInput, setUrlInput] = useState('')
   const [imageTab, setImageTab] = useState<'stock' | 'url' | 'upload'>('stock')
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const cameraInputRef = useRef<HTMLInputElement>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editForm, setEditForm] = useState({ name: '', price: '', category: '' })
   const allCategories = Array.from(new Set([...BASE_CATEGORIES, ...menuItems.map(i => i.category)]))
@@ -384,11 +385,22 @@ function MenuPanel({ menuItems, availability, onToggle, onAdd, onEdit, onDelete 
               <input value={urlInput} onChange={e => setUrlInput(e.target.value)} placeholder="https://example.com/image.jpg" style={{ width: '100%', boxSizing: 'border-box', padding: '9px 12px', border: '1.5px solid #e5e7eb', borderRadius: 9, fontSize: 14, outline: 'none' }} />
             )}
             {imageTab === 'upload' && (
-              <div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {/* Gallery / file picker */}
                 <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} style={{ display: 'none' }} />
-                <button onClick={() => fileInputRef.current?.click()} style={{ padding: '10px 18px', border: '1.5px dashed #d1d5db', borderRadius: 9, background: '#f9fafb', color: '#6b7280', fontWeight: 600, fontSize: 13, cursor: 'pointer', width: '100%' }}>
-                  {selectedImage && imageTab === 'upload' ? '✅ Image selected — click to change' : '📁 Choose file from device'}
-                </button>
+                {/* Camera input — capture="environment" opens rear camera directly */}
+                <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handleFileUpload} style={{ display: 'none' }} />
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button onClick={() => fileInputRef.current?.click()} style={{ flex: 1, padding: '10px 14px', border: '1.5px dashed #d1d5db', borderRadius: 9, background: '#f9fafb', color: '#6b7280', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
+                    📁 Choose file
+                  </button>
+                  <button onClick={() => cameraInputRef.current?.click()} style={{ flex: 1, padding: '10px 14px', border: '1.5px dashed #d1d5db', borderRadius: 9, background: '#f9fafb', color: '#6b7280', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
+                    📷 Take photo
+                  </button>
+                </div>
+                {selectedImage && imageTab === 'upload' && (
+                  <p style={{ margin: 0, fontSize: 12, color: '#16a34a', fontWeight: 600 }}>✅ Image selected — tap a button above to change</p>
+                )}
               </div>
             )}
             {/* Preview */}
