@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Check, Clock, ShoppingBag, TrendingUp, Users, ToggleLeft, ToggleRight, Plus, Minus, ChevronRight } from 'lucide-react'
 
 /* ── Types ─────────────────────────────────────────────────────── */
@@ -23,7 +23,53 @@ const STATUS_LABEL: Record<DemoOrderStatus, string> = {
 const STATUS_COLOR: Record<DemoOrderStatus, string> = {
   pending: '#f59e0b', preparing: '#3b82f6', ready: '#8b5cf6', delivered: '#22c55e',
 }
-interface DemoMenuItem { id: string; name: string; price: number; category: string }
+interface DemoMenuItem { id: string; name: string; price: number; category: string; image_url?: string }
+
+/* ── Stock photos (Unsplash, stable IDs) ───────────────────────── */
+const STOCK_PHOTOS: Record<string, string[]> = {
+  Burgers: [
+    'https://images.unsplash.com/photo-1568901289442-5b6e0b8b0b5f?w=400&h=300&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1550547660-d9450f859349?w=400&h=300&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1586190848861-99aa4a171e90?w=400&h=300&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1572802419224-296b0aeee0d9?w=400&h=300&fit=crop&q=80',
+  ],
+  Pizza: [
+    'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400&h=300&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=400&h=300&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1574071347293-0e9fdebceaa9?w=400&h=300&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1628840042765-356cda07504e?w=400&h=300&fit=crop&q=80',
+  ],
+  Salads: [
+    'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=400&h=300&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1546069782-d4490a0f03b4?w=400&h=300&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1540420611562-5e8b3261419c?w=400&h=300&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1623428187969-5da2dcea5ebf?w=400&h=300&fit=crop&q=80',
+  ],
+  Starters: [
+    'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=400&h=300&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1541614101520-9db3ab1d2202?w=400&h=300&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400&h=300&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1562059390-a761a084768e?w=400&h=300&fit=crop&q=80',
+  ],
+  Desserts: [
+    'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=400&h=300&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1551024601-bec78aea704b?w=400&h=300&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1488477181946-6428a0291777?w=400&h=300&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1563729784474-d77dbb933a9e?w=400&h=300&fit=crop&q=80',
+  ],
+  Drinks: [
+    'https://images.unsplash.com/photo-1544145045-5d9b5a54afab?w=400&h=300&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1536935338788-846bb9981813?w=400&h=300&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1562441272-4dbe17bd0c73?w=400&h=300&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1497534446932-c925b458314e?w=400&h=300&fit=crop&q=80',
+  ],
+  _default: [
+    'https://images.unsplash.com/photo-1565058379802-bbe93b2f703a?w=400&h=300&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&h=300&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1498837167922-ddd27525d352?w=400&h=300&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=400&h=300&fit=crop&q=80',
+  ],
+}
 
 const BASE_ITEMS: DemoMenuItem[] = [
   { id: '1',  name: 'Classic Burger',       price: 13.99, category: 'Burgers'  },
@@ -226,19 +272,36 @@ function MenuPanel({ menuItems, availability, onToggle, onAdd }: {
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState({ name: '', price: '', category: BASE_CATEGORIES[0] })
   const [customCat, setCustomCat] = useState('')
+  const [selectedImage, setSelectedImage] = useState<string>('')
+  const [urlInput, setUrlInput] = useState('')
+  const [imageTab, setImageTab] = useState<'stock' | 'url' | 'upload'>('stock')
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const filtered = cat === 'All' ? menuItems : menuItems.filter(i => i.category === cat)
   const available = menuItems.filter(i => availability[i.id] !== false).length
+  const stockPhotos = STOCK_PHOTOS[form.category] ?? STOCK_PHOTOS._default
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = ev => { setSelectedImage(ev.target?.result as string); setImageTab('upload') }
+    reader.readAsDataURL(file)
+  }
 
   const handleAdd = () => {
     const name = form.name.trim()
     const price = parseFloat(form.price)
     const category = form.category === '__custom__' ? customCat.trim() : form.category
     if (!name || !price || !category) return
-    const newItem: DemoMenuItem = { id: 'CUSTOM-' + Math.random().toString(36).slice(2, 8).toUpperCase(), name, price, category }
+    const image_url = imageTab === 'url' ? urlInput.trim() || undefined : selectedImage || undefined
+    const newItem: DemoMenuItem = { id: 'CUSTOM-' + Math.random().toString(36).slice(2, 8).toUpperCase(), name, price, category, image_url }
     onAdd(newItem)
     setForm({ name: '', price: '', category: BASE_CATEGORIES[0] })
     setCustomCat('')
+    setSelectedImage('')
+    setUrlInput('')
+    setImageTab('stock')
     setShowForm(false)
   }
 
@@ -275,7 +338,50 @@ function MenuPanel({ menuItems, availability, onToggle, onAdd }: {
               <input value={customCat} onChange={e => setCustomCat(e.target.value)} placeholder="e.g. Specials" style={{ width: '100%', boxSizing: 'border-box', padding: '9px 12px', border: '1.5px solid #e5e7eb', borderRadius: 9, fontSize: 14, outline: 'none' }} />
             </div>
           )}
-          <button onClick={handleAdd} style={{ background: '#16a34a', color: '#fff', border: 'none', borderRadius: 9, padding: '9px 20px', fontSize: 14, fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap' }}>Add to Menu</button>
+          {/* Image section — full width */}
+          <div style={{ flex: '1 1 100%', marginTop: 4 }}>
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6b7280', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>Image</label>
+            {/* Tab switcher */}
+            <div style={{ display: 'flex', gap: 4, marginBottom: 10 }}>
+              {(['stock', 'url', 'upload'] as const).map(tab => (
+                <button key={tab} onClick={() => setImageTab(tab)} style={{ padding: '5px 12px', borderRadius: 7, border: `1.5px solid ${imageTab === tab ? '#16a34a' : '#e5e7eb'}`, background: imageTab === tab ? '#f0fdf4' : '#fff', color: imageTab === tab ? '#16a34a' : '#6b7280', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
+                  {tab === 'stock' ? '🖼️ Stock' : tab === 'url' ? '🔗 URL' : '⬆️ Upload'}
+                </button>
+              ))}
+            </div>
+            {imageTab === 'stock' && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
+                {/* No image option */}
+                <button onClick={() => setSelectedImage('')} style={{ aspectRatio: '4/3', borderRadius: 8, border: `2px solid ${selectedImage === '' ? '#16a34a' : '#e5e7eb'}`, background: '#f9fafb', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: 18 }}>
+                  🚫
+                </button>
+                {stockPhotos.map((url, i) => (
+                  <button key={i} onClick={() => setSelectedImage(url)} style={{ aspectRatio: '4/3', borderRadius: 8, border: `2px solid ${selectedImage === url ? '#16a34a' : '#e5e7eb'}`, background: '#f0f0f0', overflow: 'hidden', cursor: 'pointer', padding: 0 }}>
+                    <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                  </button>
+                ))}
+              </div>
+            )}
+            {imageTab === 'url' && (
+              <input value={urlInput} onChange={e => setUrlInput(e.target.value)} placeholder="https://example.com/image.jpg" style={{ width: '100%', boxSizing: 'border-box', padding: '9px 12px', border: '1.5px solid #e5e7eb', borderRadius: 9, fontSize: 14, outline: 'none' }} />
+            )}
+            {imageTab === 'upload' && (
+              <div>
+                <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} style={{ display: 'none' }} />
+                <button onClick={() => fileInputRef.current?.click()} style={{ padding: '10px 18px', border: '1.5px dashed #d1d5db', borderRadius: 9, background: '#f9fafb', color: '#6b7280', fontWeight: 600, fontSize: 13, cursor: 'pointer', width: '100%' }}>
+                  {selectedImage && imageTab === 'upload' ? '✅ Image selected — click to change' : '📁 Choose file from device'}
+                </button>
+              </div>
+            )}
+            {/* Preview */}
+            {(selectedImage || (imageTab === 'url' && urlInput)) && (
+              <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
+                <img src={imageTab === 'url' ? urlInput : selectedImage} alt="preview" style={{ width: 60, height: 45, objectFit: 'cover', borderRadius: 6, border: '1px solid #e5e7eb' }} />
+                <span style={{ fontSize: 12, color: '#6b7280' }}>Preview</span>
+              </div>
+            )}
+          </div>
+          <button onClick={handleAdd} style={{ background: '#16a34a', color: '#fff', border: 'none', borderRadius: 9, padding: '9px 20px', fontSize: 14, fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap', alignSelf: 'flex-end' }}>Add to Menu</button>
         </div>
       )}
 
@@ -290,7 +396,13 @@ function MenuPanel({ menuItems, availability, onToggle, onAdd }: {
         {filtered.map((item, i) => {
           const on = availability[item.id] !== false
           return (
-            <div key={item.id} style={{ display: 'flex', alignItems: 'center', padding: '14px 20px', borderBottom: i < filtered.length - 1 ? '1px solid #f5f5f5' : 'none', opacity: on ? 1 : 0.5 }}>
+            <div key={item.id} style={{ display: 'flex', alignItems: 'center', padding: '12px 20px', borderBottom: i < filtered.length - 1 ? '1px solid #f5f5f5' : 'none', opacity: on ? 1 : 0.5, gap: 12 }}>
+              {/* Thumbnail */}
+              <div style={{ width: 44, height: 44, borderRadius: 8, overflow: 'hidden', flexShrink: 0, background: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>
+                {item.image_url
+                  ? <img src={item.image_url} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  : '🍽️'}
+              </div>
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span style={{ fontSize: 14, fontWeight: 700, color: '#111' }}>{item.name}</span>
@@ -349,10 +461,17 @@ function POSPanel({ menuItems, onPlaceOrder }: { menuItems: DemoMenuItem[]; onPl
           {filtered.map(item => {
             const qty = posCart[item.id] || 0
             return (
-              <button key={item.id} onClick={() => addItem(item.id)} style={{ background: qty > 0 ? '#f0fdf4' : '#fff', border: qty > 0 ? '2px solid #16a34a' : '2px solid #e5e7eb', borderRadius: 12, padding: 14, textAlign: 'left', cursor: 'pointer', transition: 'all 0.15s', position: 'relative' }}>
-                {qty > 0 && <span style={{ position: 'absolute', top: 8, right: 8, background: '#16a34a', color: '#fff', borderRadius: 999, width: 20, height: 20, fontSize: 11, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{qty}</span>}
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#111', marginBottom: 4 }}>{item.name}</div>
-                <div style={{ fontSize: 13, fontWeight: 900, color: '#16a34a' }}>${item.price.toFixed(2)}</div>
+              <button key={item.id} onClick={() => addItem(item.id)} style={{ background: qty > 0 ? '#f0fdf4' : '#fff', border: qty > 0 ? '2px solid #16a34a' : '2px solid #e5e7eb', borderRadius: 12, padding: 0, textAlign: 'left', cursor: 'pointer', transition: 'all 0.15s', position: 'relative', overflow: 'hidden' }}>
+                {qty > 0 && <span style={{ position: 'absolute', top: 6, right: 6, background: '#16a34a', color: '#fff', borderRadius: 999, width: 20, height: 20, fontSize: 11, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1 }}>{qty}</span>}
+                {item.image_url && (
+                  <div style={{ width: '100%', height: 72, overflow: 'hidden' }}>
+                    <img src={item.image_url} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                  </div>
+                )}
+                <div style={{ padding: '10px 12px' }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#111', marginBottom: 2, lineHeight: 1.3 }}>{item.name}</div>
+                  <div style={{ fontSize: 13, fontWeight: 900, color: '#16a34a' }}>${item.price.toFixed(2)}</div>
+                </div>
               </button>
             )
           })}
