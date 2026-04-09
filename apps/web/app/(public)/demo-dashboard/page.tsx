@@ -23,7 +23,9 @@ const STATUS_LABEL: Record<DemoOrderStatus, string> = {
 const STATUS_COLOR: Record<DemoOrderStatus, string> = {
   pending: '#f59e0b', preparing: '#3b82f6', ready: '#8b5cf6', delivered: '#22c55e',
 }
-const MOCK_ITEMS = [
+interface DemoMenuItem { id: string; name: string; price: number; category: string }
+
+const BASE_ITEMS: DemoMenuItem[] = [
   { id: '1',  name: 'Classic Burger',       price: 13.99, category: 'Burgers'  },
   { id: '2',  name: 'Mushroom Swiss Burger', price: 15.99, category: 'Burgers'  },
   { id: '3',  name: 'BBQ Bacon Burger',      price: 17.99, category: 'Burgers'  },
@@ -37,7 +39,7 @@ const MOCK_ITEMS = [
   { id: '11', name: 'Fresh Lemonade',        price:  4.99, category: 'Drinks'   },
   { id: '12', name: 'Craft Cola',            price:  3.99, category: 'Drinks'   },
 ]
-const MOCK_CATEGORIES = ['All', 'Burgers', 'Pizza', 'Salads', 'Starters', 'Desserts', 'Drinks']
+const BASE_CATEGORIES = ['Burgers', 'Pizza', 'Salads', 'Starters', 'Desserts', 'Drinks']
 
 const now = Date.now()
 const SEED_ORDERS: DemoOrder[] = [
@@ -213,21 +215,73 @@ function KDSPanel({ orders, newOrderIds, onAdvance }: {
 }
 
 /* ── Menu Panel ────────────────────────────────────────────────── */
-function MenuPanel({ availability, onToggle }: {
+function MenuPanel({ menuItems, availability, onToggle, onAdd }: {
+  menuItems: DemoMenuItem[]
   availability: Record<string, boolean>
   onToggle: (id: string, val: boolean) => void
+  onAdd: (item: DemoMenuItem) => void
 }) {
+  const categories = ['All', ...Array.from(new Set(menuItems.map(i => i.category)))]
   const [cat, setCat] = useState('All')
-  const filtered = cat === 'All' ? MOCK_ITEMS : MOCK_ITEMS.filter(i => i.category === cat)
-  const available = Object.values(availability).filter(Boolean).length
+  const [showForm, setShowForm] = useState(false)
+  const [form, setForm] = useState({ name: '', price: '', category: BASE_CATEGORIES[0] })
+  const [customCat, setCustomCat] = useState('')
+
+  const filtered = cat === 'All' ? menuItems : menuItems.filter(i => i.category === cat)
+  const available = menuItems.filter(i => availability[i.id] !== false).length
+
+  const handleAdd = () => {
+    const name = form.name.trim()
+    const price = parseFloat(form.price)
+    const category = form.category === '__custom__' ? customCat.trim() : form.category
+    if (!name || !price || !category) return
+    const newItem: DemoMenuItem = { id: 'CUSTOM-' + Math.random().toString(36).slice(2, 8).toUpperCase(), name, price, category }
+    onAdd(newItem)
+    setForm({ name: '', price: '', category: BASE_CATEGORIES[0] })
+    setCustomCat('')
+    setShowForm(false)
+  }
+
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <div style={{ fontSize: 14, color: '#6b7280' }}><span style={{ fontWeight: 800, color: '#16a34a', fontSize: 18 }}>{available}</span> / {MOCK_ITEMS.length} items available</div>
+        <div style={{ fontSize: 14, color: '#6b7280' }}><span style={{ fontWeight: 800, color: '#16a34a', fontSize: 18 }}>{available}</span> / {menuItems.length} items available</div>
+        <button onClick={() => setShowForm(v => !v)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: showForm ? '#f3f4f6' : '#16a34a', color: showForm ? '#374151' : '#fff', border: 'none', borderRadius: 10, padding: '8px 14px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+          <Plus size={15} /> {showForm ? 'Cancel' : 'Add Item'}
+        </button>
       </div>
+
+      {/* Add item form */}
+      {showForm && (
+        <div style={{ background: '#fff', borderRadius: 14, padding: 20, marginBottom: 20, boxShadow: '0 1px 10px rgba(0,0,0,0.07)', display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+          <div style={{ flex: '2 1 160px' }}>
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6b7280', marginBottom: 5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Item Name</label>
+            <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Truffle Fries" style={{ width: '100%', boxSizing: 'border-box', padding: '9px 12px', border: '1.5px solid #e5e7eb', borderRadius: 9, fontSize: 14, outline: 'none' }} />
+          </div>
+          <div style={{ flex: '1 1 90px' }}>
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6b7280', marginBottom: 5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Price ($)</label>
+            <input type="number" min="0" step="0.01" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} placeholder="0.00" style={{ width: '100%', boxSizing: 'border-box', padding: '9px 12px', border: '1.5px solid #e5e7eb', borderRadius: 9, fontSize: 14, outline: 'none' }} />
+          </div>
+          <div style={{ flex: '1 1 120px' }}>
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6b7280', marginBottom: 5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Category</label>
+            <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} style={{ width: '100%', boxSizing: 'border-box', padding: '9px 12px', border: '1.5px solid #e5e7eb', borderRadius: 9, fontSize: 14, outline: 'none', background: '#fff' }}>
+              {Array.from(new Set([...BASE_CATEGORIES, ...menuItems.map(i => i.category)])).map(c => <option key={c} value={c}>{c}</option>)}
+              <option value="__custom__">+ New category…</option>
+            </select>
+          </div>
+          {form.category === '__custom__' && (
+            <div style={{ flex: '1 1 120px' }}>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6b7280', marginBottom: 5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Category Name</label>
+              <input value={customCat} onChange={e => setCustomCat(e.target.value)} placeholder="e.g. Specials" style={{ width: '100%', boxSizing: 'border-box', padding: '9px 12px', border: '1.5px solid #e5e7eb', borderRadius: 9, fontSize: 14, outline: 'none' }} />
+            </div>
+          )}
+          <button onClick={handleAdd} style={{ background: '#16a34a', color: '#fff', border: 'none', borderRadius: 9, padding: '9px 20px', fontSize: 14, fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap' }}>Add to Menu</button>
+        </div>
+      )}
+
       {/* Category pills */}
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20 }}>
-        {MOCK_CATEGORIES.map(c => (
+        {categories.map(c => (
           <button key={c} onClick={() => setCat(c)} style={{ padding: '6px 14px', borderRadius: 999, border: 'none', background: cat === c ? '#16a34a' : '#f3f4f6', color: cat === c ? '#fff' : '#374151', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>{c}</button>
         ))}
       </div>
@@ -238,7 +292,10 @@ function MenuPanel({ availability, onToggle }: {
           return (
             <div key={item.id} style={{ display: 'flex', alignItems: 'center', padding: '14px 20px', borderBottom: i < filtered.length - 1 ? '1px solid #f5f5f5' : 'none', opacity: on ? 1 : 0.5 }}>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: '#111', marginBottom: 2 }}>{item.name}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: '#111' }}>{item.name}</span>
+                  {item.id.startsWith('CUSTOM-') && <span style={{ fontSize: 10, fontWeight: 700, background: '#ede9fe', color: '#7c3aed', borderRadius: 5, padding: '1px 6px' }}>NEW</span>}
+                </div>
                 <div style={{ fontSize: 12, color: '#9ca3af' }}>{item.category} · ${item.price.toFixed(2)}</div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -256,7 +313,7 @@ function MenuPanel({ availability, onToggle }: {
 }
 
 /* ── POS Panel ─────────────────────────────────────────────────── */
-function POSPanel({ onPlaceOrder }: { onPlaceOrder: (items: DemoOrderItem[], name: string) => void }) {
+function POSPanel({ menuItems, onPlaceOrder }: { menuItems: DemoMenuItem[]; onPlaceOrder: (items: DemoOrderItem[], name: string) => void }) {
   const [posCart, setPosCart] = useState<Record<string, number>>({})
   const [customer, setCustomer] = useState('')
   const [posCat, setPosCat] = useState('All')
@@ -264,9 +321,10 @@ function POSPanel({ onPlaceOrder }: { onPlaceOrder: (items: DemoOrderItem[], nam
 
   const addItem = (id: string) => setPosCart(p => ({ ...p, [id]: (p[id] || 0) + 1 }))
   const removeItem = (id: string) => setPosCart(p => { const n = { ...p }; if (n[id] > 1) n[id]--; else delete n[id]; return n })
-  const cartItems = MOCK_ITEMS.filter(i => posCart[i.id] > 0)
+  const cartItems = menuItems.filter(i => posCart[i.id] > 0)
   const total = cartItems.reduce((s, i) => s + i.price * posCart[i.id], 0)
-  const filtered = posCat === 'All' ? MOCK_ITEMS : MOCK_ITEMS.filter(i => i.category === posCat)
+  const categories = ['All', ...Array.from(new Set(menuItems.map(i => i.category)))]
+  const filtered = posCat === 'All' ? menuItems : menuItems.filter(i => i.category === posCat)
 
   const handlePlace = () => {
     if (!cartItems.length || !customer.trim()) return
@@ -283,7 +341,7 @@ function POSPanel({ onPlaceOrder }: { onPlaceOrder: (items: DemoOrderItem[], nam
       {/* Item grid */}
       <div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
-          {MOCK_CATEGORIES.map(c => (
+          {categories.map(c => (
             <button key={c} onClick={() => setPosCat(c)} style={{ padding: '5px 12px', borderRadius: 999, border: 'none', background: posCat === c ? '#16a34a' : '#f3f4f6', color: posCat === c ? '#fff' : '#374151', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>{c}</button>
           ))}
         </div>
@@ -347,8 +405,9 @@ function POSPanel({ onPlaceOrder }: { onPlaceOrder: (items: DemoOrderItem[], nam
 export default function DemoDashboardPage() {
   const [orders, setOrders] = useState<DemoOrder[]>(SEED_ORDERS)
   const [activeTab, setActiveTab] = useState<DemoTab>('kds')
+  const [menuItems, setMenuItems] = useState<DemoMenuItem[]>(BASE_ITEMS)
   const [availability, setAvailability] = useState<Record<string, boolean>>(
-    () => Object.fromEntries(MOCK_ITEMS.map(i => [i.id, true]))
+    () => Object.fromEntries(BASE_ITEMS.map(i => [i.id, true]))
   )
   const [newOrderIds, setNewOrderIds] = useState<Set<string>>(new Set())
   const [syncActive, setSyncActive] = useState(false)
@@ -402,6 +461,12 @@ export default function DemoDashboardPage() {
     channelRef.current?.postMessage({ type: val ? 'ITEM_AVAILABLE' : 'ITEM_UNAVAILABLE', itemId })
   }
 
+  const handleAddMenuItem = (item: DemoMenuItem) => {
+    setMenuItems(prev => [...prev, item])
+    setAvailability(prev => ({ ...prev, [item.id]: true }))
+    channelRef.current?.postMessage({ type: 'MENU_ITEM_ADDED', item })
+  }
+
   const handlePOSOrder = (items: DemoOrderItem[], customerName: string) => {
     const id = 'POS-' + Math.random().toString(36).slice(2, 8).toUpperCase()
     const total = items.reduce((s, i) => s + i.price * i.quantity, 0)
@@ -424,8 +489,8 @@ export default function DemoDashboardPage() {
       <DashboardChrome activeTab={activeTab} onTabChange={setActiveTab} syncActive={syncActive} />
       <div style={{ flex: 1, overflowY: 'auto', padding: '24px 20px' }}>
         {activeTab === 'kds' && <KDSPanel orders={orders} newOrderIds={newOrderIds} onAdvance={handleStatusAdvance} />}
-        {activeTab === 'menu' && <MenuPanel availability={availability} onToggle={handleItemToggle} />}
-        {activeTab === 'pos' && <POSPanel onPlaceOrder={handlePOSOrder} />}
+        {activeTab === 'menu' && <MenuPanel menuItems={menuItems} availability={availability} onToggle={handleItemToggle} onAdd={handleAddMenuItem} />}
+        {activeTab === 'pos' && <POSPanel menuItems={menuItems} onPlaceOrder={handlePOSOrder} />}
       </div>
     </div>
   )

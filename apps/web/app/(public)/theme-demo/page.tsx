@@ -429,6 +429,7 @@ export default function DemoPage() {
   const [step, setStep] = useState<FlowStep>('browse')
   const [cart, setCart] = useState<CartItem[]>([])
   const [availability, setAvailability] = useState<Record<string, boolean>>({})
+  const [menuItems, setMenuItems] = useState(MOCK_ITEMS)
 
   useEffect(() => {
     if (typeof window === 'undefined' || !('BroadcastChannel' in window)) return
@@ -438,6 +439,8 @@ export default function DemoPage() {
         setAvailability(prev => ({ ...prev, [data.itemId]: false }))
       if (data.type === 'ITEM_AVAILABLE' && data.itemId)
         setAvailability(prev => ({ ...prev, [data.itemId]: true }))
+      if (data.type === 'MENU_ITEM_ADDED' && data.item)
+        setMenuItems(prev => prev.some(i => i.id === data.item.id) ? prev : [...prev, data.item])
     }
     return () => ch.close()
   }, [])
@@ -464,8 +467,8 @@ export default function DemoPage() {
         {step === 'browse' && (
           <TemplateComponent
             restaurant={cfg.restaurant}
-            menuItems={MOCK_ITEMS}
-            categories={MOCK_CATEGORIES}
+            menuItems={menuItems}
+            categories={Array.from(new Set(menuItems.map(i => i.category)))}
             onCheckout={handleCheckout}
             availability={availability}
           />
