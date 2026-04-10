@@ -176,21 +176,31 @@ function DemoCheckout({ cart, restaurant, primaryColor, onBack, onPlace }: {
   }
 
   return (
-    <div style={{ background: '#f8f8f8', minHeight: 'calc(100vh - 56px)', padding: '40px 24px' }}>
+    <div style={{ background: '#f8f8f8', minHeight: 'calc(100vh - 56px)' }} className="hr-co-outer">
+      <style>{`
+        .hr-co-outer { padding: 40px 24px; }
+        .hr-co-grid  { display: grid; grid-template-columns: minmax(0,1fr) min(380px,100%); gap: 24px; align-items: start; }
+        .hr-co-name  { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        @media (max-width: 640px) {
+          .hr-co-outer { padding: 20px 16px; }
+          .hr-co-grid  { grid-template-columns: 1fr; }
+          .hr-co-name  { grid-template-columns: 1fr; }
+        }
+      `}</style>
       <div style={{ maxWidth: 900, margin: '0 auto' }}>
         <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: '#6b7280', fontSize: 14, fontWeight: 600, cursor: 'pointer', marginBottom: 28, padding: 0 }}>
           <ArrowLeft size={16} /> Back to menu
         </button>
 
-        <h2 style={{ margin: '0 0 32px', fontSize: 28, fontWeight: 900, color: '#111', letterSpacing: -0.5 }}>Checkout</h2>
+        <h2 style={{ margin: '0 0 28px', fontSize: 26, fontWeight: 900, color: '#111', letterSpacing: -0.5 }}>Checkout</h2>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) min(380px, 100%)', gap: 24, alignItems: 'start' }}>
+        <div className="hr-co-grid">
           {/* Left: form */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             {/* Customer details */}
             <div style={{ background: '#fff', borderRadius: 16, padding: 24, boxShadow: '0 1px 12px rgba(0,0,0,0.06)' }}>
               <h3 style={{ margin: '0 0 20px', fontSize: 16, fontWeight: 800, color: '#111' }}>👤 Your Details</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              <div className="hr-co-name">
                 {[
                   { label: 'Full Name', icon: <User size={14} />, value: 'Jane Demo', placeholder: 'Jane Smith' },
                   { label: 'Phone', icon: <Phone size={14} />, value: '(555) 010-0100', placeholder: '(555) 000-0000' },
@@ -311,12 +321,20 @@ function DemoTrack({ cart, restaurant, primaryColor, onReset }: {
   ]
 
   return (
-    <div style={{ background: '#f8f8f8', minHeight: 'calc(100vh - 56px)', padding: '40px 24px' }}>
+    <div style={{ background: '#f8f8f8', minHeight: 'calc(100vh - 56px)' }} className="hr-tr-outer">
+      <style>{`
+        .hr-tr-outer  { padding: 40px 24px; }
+        .hr-tr-banner { padding: 28px 32px; }
+        @media (max-width: 640px) {
+          .hr-tr-outer  { padding: 20px 16px; }
+          .hr-tr-banner { padding: 20px 18px; }
+        }
+      `}</style>
       <div style={{ maxWidth: 680, margin: '0 auto' }}>
         {/* Success banner */}
-        <div style={{
+        <div className="hr-tr-banner" style={{
           background: `linear-gradient(135deg, ${primaryColor}, ${primaryColor}cc)`,
-          borderRadius: 20, padding: '28px 32px', marginBottom: 32,
+          borderRadius: 20, marginBottom: 32,
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           flexWrap: 'wrap', gap: 16,
         }}>
